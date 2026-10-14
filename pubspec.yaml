@@ -1,0 +1,41 @@
+name: rn_network_viewer
+description: Flutter desktop devtools for the React Native network debugger SDK.
+publish_to: none
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  file_selector: ^1.1.0
+  shared_preferences: ^2.5.6
+  flutter_localizations:
+    sdk: flutter
+
+  intl: ^0.20.2
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  generate: true
+  uses-material-design: true
+  assets:
+    - assets/fonts/jetbrains_mono/OFL.txt
+  fonts:
+    - family: JetBrains Mono
+      fonts:
+        - asset: assets/fonts/jetbrains_mono/JetBrainsMono-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/jetbrains_mono/JetBrainsMono-Italic.ttf
+          weight: 400
+          style: italic
+        - asset: assets/fonts/jetbrains_mono/JetBrainsMono-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/jetbrains_mono/JetBrainsMono-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/jetbrains_mono/JetBrainsMono-Bold.ttf
+          weight: 700

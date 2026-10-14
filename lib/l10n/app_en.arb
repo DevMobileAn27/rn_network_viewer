@@ -1,0 +1,194 @@
+{
+  "@@locale": "en",
+  "settings": "Settings",
+  "appearance": "Interface",
+  "language": "Language",
+  "connection": "Connection",
+  "webSocketPort": "WebSocket port",
+  "portValidation": "Enter a port from 1 to 65535",
+  "saveRestart": "Save & restart",
+  "saving": "Saving…",
+  "portSaved": "Port saved. Server restarted.",
+  "settingsSaveFailed": "Could not save settings. Please try again.",
+  "network": "Network",
+  "console": "Console",
+  "allMethods": "All methods",
+  "allStatuses": "All statuses",
+  "allLevels": "All levels",
+  "success": "Success",
+  "errors": "Errors",
+  "pending": "Pending",
+  "error": "Error",
+  "aborted": "Aborted",
+  "guideTitle": "Connect your React Native app",
+  "availableEndpoints": "Endpoints",
+  "physicalDeviceGuide": "Physical device: VIEWER_HOST = computer LAN IP (same network).",
+  "copyEndpoint": "Copy local endpoint",
+  "gotIt": "Close",
+  "pausedBanner": "Capture paused · Incoming events discarded",
+  "starting": "Starting…",
+  "serverStopped": "●  Server stopped",
+  "stopServer": "Stop server",
+  "startServer": "Start server",
+  "connectionGuide": "Connection guide",
+  "workspace": "WORKSPACE",
+  "allSessions": "All sessions",
+  "applications": "APPLICATIONS",
+  "noApps": "No apps connected",
+  "connected": "Connected",
+  "disconnected": "Disconnected",
+  "resumeCapture": "Resume capture",
+  "pauseCapture": "Pause capture (discard incoming events)",
+  "clearCapture": "Clear all captured data",
+  "exportCapture": "Export all captured data as JSON",
+  "session": "Session",
+  "searchConsole": "Search messages and arguments…",
+  "searchNetwork": "Filter URL, method, status…",
+  "clearSearch": "Clear search",
+  "methodColumn": "METHOD",
+  "urlColumn": "URL / APPLICATION",
+  "statusColumn": "STATUS",
+  "timeColumn": "TIME",
+  "consoleEmptyTitle": "No logs",
+  "networkEmptyTitle": "No requests",
+  "noResults": "No matching results",
+  "connectApp": "Connect an app",
+  "resetFilters": "Reset filters",
+  "selectionTitle": "Select an entry",
+  "closeInspector": "Close inspector",
+  "unsupportedEvent": "Unsupported event received",
+  "copied": "Copied to clipboard",
+  "notCaptured": "Not captured",
+  "requestInspector": "Request inspector",
+  "copyCurl": "Copy as cURL",
+  "curlCopied": "cURL copied",
+  "overview": "Overview",
+  "request": "Request",
+  "response": "Response",
+  "raw": "Raw",
+  "requestId": "Request ID",
+  "source": "Source",
+  "started": "Started",
+  "status": "Status",
+  "waitingResponse": "Waiting for response…",
+  "responseSize": "Response size",
+  "queryParameters": "Query parameters",
+  "headers": "Headers",
+  "body": "Body",
+  "consoleInspector": "Console inspector",
+  "level": "Level",
+  "timestamp": "Timestamp",
+  "message": "Message",
+  "arguments": "Arguments",
+  "rawEvent": "Raw event",
+  "missingRequest": "(request not received)",
+  "listening": "●  Listening :{port}",
+  "@listening": {
+    "placeholders": {
+      "port": {
+        "type": "int"
+      }
+    }
+  },
+  "sessionCount": "{count} sessions",
+  "@sessionCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "connectionCount": "{count, plural, =1{1 connection} other{{count} connections}}",
+  "@connectionCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "captureStats": "{visible} visible · {evicted} evicted · {skipped} skipped",
+  "@captureStats": {
+    "placeholders": {
+      "visible": {
+        "type": "int"
+      },
+      "evicted": {
+        "type": "int"
+      },
+      "skipped": {
+        "type": "int"
+      }
+    }
+  },
+  "invalidCount": "{count} invalid",
+  "@invalidCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "copySection": "Copy {title}",
+  "@copySection": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "itemCount": "{count} items",
+  "@itemCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "capturedBytes": "{count} bytes (captured UTF-8 body)",
+  "@capturedBytes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "exportedTo": "Capture exported to {path}",
+  "@exportedTo": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "exportFailed": "Export failed: {error}",
+  "@exportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "serverStartFailed": "Could not start server: {error}",
+  "@serverStartFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "usbGuide": "iOS simulator: 127.0.0.1\nAndroid emulator: 10.0.2.2\nAndroid USB: adb reverse tcp:{port} tcp:{port}, then set VIEWER_HOST to 127.0.0.1.",
+  "@usbGuide": {
+    "placeholders": {
+      "port": {
+        "type": "int"
+      }
+    }
+  },
+  "theme": "Theme",
+  "lightTheme": "Light",
+  "darkTheme": "Dark",
+  "resizeInspector": "Resize inspector",
+  "formattedJson": "Formatted JSON",
+  "treeView": "Tree view",
+  "treeTab": "Tree"
+}
