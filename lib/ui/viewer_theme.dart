@@ -16,16 +16,48 @@ class ViewerPalette {
   Color get input => dark ? const Color(0xff20252c) : const Color(0xffedf1f5);
   Color get muted => dark ? const Color(0xff8d98a7) : const Color(0xff596778);
   Color get accent => dark ? const Color(0xff63ddbb) : const Color(0xff08785d);
+  Color get primaryFill => const Color(0xff08785d);
   Color get danger => dark ? const Color(0xffff848a) : const Color(0xffbd293a);
   Color get line => dark ? const Color(0xff2a3038) : const Color(0xffd6dde5);
   Color get warning => dark ? const Color(0xffe4bc87) : const Color(0xff8c560b);
   Color get info => dark ? const Color(0xff91b9f1) : const Color(0xff285da8);
   Color get method => dark ? const Color(0xffb6a3ed) : const Color(0xff7150ad);
   Color get string => dark ? const Color(0xffb2d9a0) : const Color(0xff39712a);
+
+  Color methodColor(String method) => switch (method.toUpperCase()) {
+    'GET' => info,
+    'POST' => accent,
+    'PUT' => dark ? const Color(0xffffb570) : const Color(0xffa64b00),
+    'PATCH' => dark ? const Color(0xffc4a2ff) : const Color(0xff7946b5),
+    'DELETE' => danger,
+    'HEAD' => dark ? const Color(0xff6cd5e5) : const Color(0xff087887),
+    'OPTIONS' => dark ? const Color(0xffabaeff) : const Color(0xff5454b8),
+    'TRACE' => dark ? const Color(0xffffa4d2) : const Color(0xffa32b74),
+    'CONNECT' => dark ? const Color(0xffd4b59a) : const Color(0xff805c3d),
+    _ => muted,
+  };
+
+  Color statusColor(int? status, {bool transportError = false}) {
+    if (transportError) return danger;
+    if (status == null) return muted;
+    return switch (status) {
+      >= 100 && < 200 =>
+        dark ? const Color(0xff6cd5e5) : const Color(0xff087887),
+      >= 200 && < 300 => accent,
+      >= 300 && < 400 => info,
+      >= 400 && < 500 => warning,
+      >= 500 && < 600 => danger,
+      _ => muted,
+    };
+  }
 }
 
 ThemeData viewerTheme(Brightness brightness) {
   final colors = ViewerPalette(brightness == Brightness.dark);
+  final inputBorder = OutlineInputBorder(
+    borderRadius: BorderRadius.circular(7),
+    borderSide: BorderSide(color: colors.accent),
+  );
   return ThemeData(
     fontFamily: 'JetBrains Mono',
     brightness: brightness,
@@ -47,11 +79,22 @@ ThemeData viewerTheme(Brightness brightness) {
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: colors.input,
+      fillColor: colors.surface,
+      hoverColor: Colors.transparent,
       isDense: true,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(7),
-        borderSide: BorderSide.none,
+      border: inputBorder,
+      enabledBorder: inputBorder,
+      focusedBorder: inputBorder.copyWith(
+        borderSide: BorderSide(color: colors.accent, width: 1.5),
+      ),
+      disabledBorder: inputBorder.copyWith(
+        borderSide: BorderSide(color: colors.accent.withValues(alpha: .4)),
+      ),
+      errorBorder: inputBorder.copyWith(
+        borderSide: BorderSide(color: colors.danger),
+      ),
+      focusedErrorBorder: inputBorder.copyWith(
+        borderSide: BorderSide(color: colors.danger, width: 1.5),
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
     ),

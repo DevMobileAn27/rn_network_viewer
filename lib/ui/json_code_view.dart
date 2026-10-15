@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 
+import '../l10n/strings.dart';
 import 'components.dart';
 
 /// A selectable JSON document; the gutter is kept out of copied text.
@@ -16,6 +17,9 @@ class JsonCodeView extends StatefulWidget {
 class _JsonCodeViewState extends State<JsonCodeView> {
   final _scroll = ScrollController();
   late String _document;
+  late List<String> _lines;
+  final _ranges = <int, int>{};
+  final _collapsed = <int>{};
 
   @override
   void initState() {
@@ -31,6 +35,32 @@ class _JsonCodeViewState extends State<JsonCodeView> {
 
   void _format() {
     _document = const JsonEncoder.withIndent('  ').convert(widget.value);
+    _lines = _document.split('\n');
+    _ranges.clear();
+    _collapsed.clear();
+    final openings = <int>[];
+    var line = 0;
+    var inString = false;
+    var escaped = false;
+    for (final character in _document.codeUnits) {
+      if (character == 10) line++;
+      if (inString) {
+        if (escaped) {
+          escaped = false;
+        } else if (character == 92) {
+          escaped = true;
+        } else if (character == 34) {
+          inString = false;
+        }
+      } else if (character == 34) {
+        inString = true;
+      } else if (character == 123 || character == 91) {
+        openings.add(line);
+      } else if (character == 125 || character == 93) {
+        final start = openings.removeLast();
+        if (start < line) _ranges[start] = line;
+      }
+    }
   }
 
   @override
@@ -42,20 +72,34 @@ class _JsonCodeViewState extends State<JsonCodeView> {
   @override
   Widget build(BuildContext context) {
     final colors = context.palette;
+    final codeStyle = DefaultTextStyle.of(context).style.merge(mono);
+    final visibleLines = <int>[];
+    final visibleText = <String>[];
+    for (var line = 0; line < _lines.length; line++) {
+      visibleLines.add(line);
+      final end = _ranges[line];
+      if (end != null && _collapsed.contains(line)) {
+        visibleText.add('${_lines[line]} … ${_lines[end].trimLeft()}');
+        line = end;
+      } else {
+        visibleText.add(_lines[line]);
+      }
+    }
+    final document = visibleText.join('\n');
     final tokens = RegExp(
       r'"(?:\\.|[^"\\])*"|true|false|null|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?',
     );
     final spans = <TextSpan>[];
     var offset = 0;
-    for (final match in tokens.allMatches(_document)) {
+    for (final match in tokens.allMatches(document)) {
       if (match.start > offset) {
-        spans.add(TextSpan(text: _document.substring(offset, match.start)));
+        spans.add(TextSpan(text: document.substring(offset, match.start)));
       }
       final token = match.group(0)!;
       final isKey =
           token.startsWith('"') &&
-          match.end < _document.length &&
-          _document[match.end] == ':';
+          match.end < document.length &&
+          document[match.end] == ':';
       final color = token.startsWith('"')
           ? (isKey ? colors.info : colors.string)
           : token == 'null'
@@ -71,9 +115,22 @@ class _JsonCodeViewState extends State<JsonCodeView> {
       );
       offset = match.end;
     }
-    spans.add(TextSpan(text: _document.substring(offset)));
-    final lineCount = '\n'.allMatches(_document).length + 1;
-    return DecoratedBox(
+    spans.add(TextSpan(text: document.substring(offset)));
+    final strut = StrutStyle.fromTextStyle(codeStyle, forceStrutHeight: true);
+    final metrics = TextPainter(
+      text: TextSpan(text: document, style: codeStyle),
+      strutStyle: strut,
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
+    )..layout();
+    final lineMetrics = metrics.computeLineMetrics();
+    final documentHeight = metrics.height;
+    metrics.text = TextSpan(text: '${_lines.length}', style: codeStyle);
+    metrics.layout();
+    final numberWidth = metrics.width.ceilToDouble();
+    metrics.dispose();
+    return Container(
+      width: double.infinity,
       decoration: BoxDecoration(
         color: colors.surface,
         border: Border.all(color: colors.line),
@@ -93,30 +150,99 @@ class _JsonCodeViewState extends State<JsonCodeView> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                ExcludeSemantics(
-                  child: Container(
-                    margin: const EdgeInsets.only(right: 12),
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      border: Border(right: BorderSide(color: colors.line)),
-                    ),
-                    child: Text(
-                      List.generate(
-                        lineCount,
-                        (index) => '${index + 1}',
-                      ).join('\n'),
-                      textAlign: TextAlign.right,
-                      style: mono.copyWith(color: colors.muted),
-                    ),
+                Container(
+                  margin: const EdgeInsets.only(right: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    border: Border(right: BorderSide(color: colors.line)),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ExcludeSemantics(
+                        child: SizedBox(
+                          width: numberWidth,
+                          child: Text(
+                            visibleLines
+                                .map((line) => '${line + 1}')
+                                .join('\n'),
+                            key: const ValueKey('json-line-numbers'),
+                            softWrap: false,
+                            textAlign: TextAlign.right,
+                            strutStyle: strut,
+                            style: codeStyle.copyWith(color: colors.muted),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      SizedBox(
+                        width: 20,
+                        height: documentHeight,
+                        child: Stack(
+                          children: [
+                            for (
+                              var index = 0;
+                              index < visibleLines.length;
+                              index++
+                            )
+                              if (_ranges.containsKey(visibleLines[index]))
+                                Positioned(
+                                  top:
+                                      lineMetrics[index].baseline -
+                                      lineMetrics[index].ascent,
+                                  height: lineMetrics[index].height,
+                                  left: 0,
+                                  right: 0,
+                                  child: _foldButton(visibleLines[index]),
+                                ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 SelectableText.rich(
                   TextSpan(children: spans),
-                  style: mono.copyWith(
+                  strutStyle: strut,
+                  style: codeStyle.copyWith(
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
               ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _foldButton(int line) {
+    final collapsed = _collapsed.contains(line);
+    return Tooltip(
+      message: collapsed
+          ? context.l10n.expandJsonRange
+          : context.l10n.collapseJsonRange,
+      child: Semantics(
+        button: true,
+        expanded: !collapsed,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            key: ValueKey('json-fold-$line'),
+            borderRadius: BorderRadius.circular(3),
+            onTap: () => setState(() {
+              if (collapsed) {
+                _collapsed.remove(line);
+              } else {
+                _collapsed.add(line);
+              }
+            }),
+            child: Icon(
+              collapsed
+                  ? Icons.chevron_right_rounded
+                  : Icons.keyboard_arrow_down_rounded,
+              size: 15,
+              color: context.palette.muted,
             ),
           ),
         ),

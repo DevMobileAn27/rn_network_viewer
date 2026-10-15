@@ -7,6 +7,7 @@ import 'services/capture_store.dart';
 import 'services/app_settings.dart';
 import 'l10n/app_localizations.dart';
 import 'services/viewer_server.dart';
+import 'services/viewer_mcp_server.dart';
 import 'ui/viewer_shell.dart';
 import 'ui/viewer_theme.dart';
 
@@ -25,10 +26,12 @@ class ViewerApp extends StatefulWidget {
     required this.store,
     required this.server,
     this.preferences,
+    this.mcpServer,
   });
   final CaptureStore store;
   final ViewerServer server;
   final SharedPreferences? preferences;
+  final ViewerMcpServer? mcpServer;
 
   @override
   State<ViewerApp> createState() => _ViewerAppState();
@@ -36,10 +39,25 @@ class ViewerApp extends StatefulWidget {
 
 class _ViewerAppState extends State<ViewerApp> {
   late final AppSettings _settings = AppSettings(widget.preferences);
+  late final ViewerMcpServer _mcp =
+      widget.mcpServer ?? ViewerMcpServer(widget.store, widget.server);
+
+  @override
+  void initState() {
+    super.initState();
+    _settings.addListener(_syncMcp);
+    _syncMcp();
+  }
+
+  void _syncMcp() => unawaited(
+    _mcp.configure(enabled: _settings.mcpEnabled, port: _settings.mcpPort),
+  );
 
   @override
   void dispose() {
+    _settings.removeListener(_syncMcp);
     _settings.dispose();
+    if (widget.mcpServer == null) _mcp.dispose();
     super.dispose();
   }
 
@@ -59,6 +77,7 @@ class _ViewerAppState extends State<ViewerApp> {
         store: widget.store,
         server: widget.server,
         settings: _settings,
+        mcpServer: _mcp,
       ),
     ),
   );

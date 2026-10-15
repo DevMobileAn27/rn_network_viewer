@@ -9,9 +9,14 @@ import 'settings_screen.dart';
 import '../models/capture.dart';
 import '../services/capture_store.dart';
 import '../services/viewer_server.dart';
+import '../services/viewer_mcp_server.dart';
 import 'components.dart';
+import 'animated_pill_indicator.dart';
+import 'application_tabs.dart';
+import 'viewer_dropdown.dart';
 import 'inspector.dart';
 import 'resizable_split_view.dart';
+import 'json_beautify_screen.dart';
 
 class ViewerShell extends StatefulWidget {
   const ViewerShell({
@@ -19,36 +24,55 @@ class ViewerShell extends StatefulWidget {
     required this.store,
     required this.server,
     required this.settings,
+    required this.mcpServer,
   });
   final CaptureStore store;
   final ViewerServer server;
   final AppSettings settings;
+  final ViewerMcpServer mcpServer;
   @override
   State<ViewerShell> createState() => _ViewerShellState();
 }
 
-class _ViewerShellState extends State<ViewerShell> {
+class _ViewerShellState extends State<ViewerShell>
+    with SingleTickerProviderStateMixin {
   CaptureStore get store => widget.store;
   ViewerServer get server => widget.server;
   String? _session;
   String? _networkKey;
   int? _logId;
-  bool _console = false;
+  int _activeTab = 0;
+  bool get _console => _activeTab == 1;
+  bool get _beautify => _activeTab == 2;
   String _query = '';
   String _method = 'All methods';
   String _status = 'All statuses';
   String _level = 'All levels';
   final _search = TextEditingController();
+  late final TabController _tabs;
 
   @override
   void initState() {
     super.initState();
+    _tabs = TabController(
+      length: 3,
+      vsync: this,
+      animationDuration: const Duration(milliseconds: 400),
+    );
     store.addListener(_refresh);
     server.addListener(_refresh);
   }
 
   void _refresh() {
-    if (mounted) setState(() {});
+    if (mounted) {
+      setState(() {
+        if (_session != null && !store.sessions.containsKey(_session)) {
+          _session = null;
+          _networkKey = null;
+          _logId = null;
+        }
+      });
+    }
   }
 
   @override
@@ -56,6 +80,7 @@ class _ViewerShellState extends State<ViewerShell> {
     store.removeListener(_refresh);
     server.removeListener(_refresh);
     _search.dispose();
+    _tabs.dispose();
     super.dispose();
   }
 
@@ -116,8 +141,11 @@ class _ViewerShellState extends State<ViewerShell> {
 
   Future<void> _settings() => Navigator.of(context).push<void>(
     MaterialPageRoute(
-      builder: (context) =>
-          SettingsScreen(settings: widget.settings, server: server),
+      builder: (context) => SettingsScreen(
+        settings: widget.settings,
+        server: server,
+        mcpServer: widget.mcpServer,
+      ),
     ),
   );
 
@@ -199,46 +227,48 @@ class _ViewerShellState extends State<ViewerShell> {
             Expanded(
               child: LayoutBuilder(
                 builder: (context, constraints) {
-                  final sidebar = constraints.maxWidth >= 1050;
-                  final inspector =
-                      constraints.maxWidth >= 1200 ||
-                      (constraints.maxWidth >= 900 && !sidebar);
-                  return Row(
+                  final inspector = constraints.maxWidth >= 900;
+                  return Column(
                     children: [
-                      if (sidebar) SizedBox(width: 220, child: _sidebar()),
+                      _toolbar(),
                       Expanded(
-                        child: Column(
+                        child: IndexedStack(
+                          index: _beautify ? 1 : 0,
                           children: [
-                            _toolbar(),
-                            _filters(sidebar),
-                            Expanded(
-                              child: inspector
-                                  ? ResizableSplitView(
-                                      list: _console
-                                          ? _consoleList(logs, true)
-                                          : _networkList(requests, true),
-                                      inspector: _console
-                                          ? selectedLog == null
-                                                ? _noSelection()
-                                                : ConsoleInspector(
-                                                    key: ValueKey(
-                                                      selectedLog.id,
-                                                    ),
-                                                    record: selectedLog,
-                                                  )
-                                          : selectedRequest == null
-                                          ? _noSelection()
-                                          : NetworkInspector(
-                                              key: ValueKey(
-                                                selectedRequest.key,
-                                              ),
-                                              record: selectedRequest,
-                                            ),
-                                    )
-                                  : _console
-                                  ? _consoleList(logs, false)
-                                  : _networkList(requests, false),
+                            Column(
+                              children: [
+                                _filters(),
+                                Expanded(
+                                  child: inspector
+                                      ? ResizableSplitView(
+                                          list: _console
+                                              ? _consoleList(logs, true)
+                                              : _networkList(requests, true),
+                                          inspector: _console
+                                              ? selectedLog == null
+                                                    ? _noSelection()
+                                                    : ConsoleInspector(
+                                                        key: ValueKey(
+                                                          selectedLog.id,
+                                                        ),
+                                                        record: selectedLog,
+                                                      )
+                                              : selectedRequest == null
+                                              ? _noSelection()
+                                              : NetworkInspector(
+                                                  key: ValueKey(
+                                                    selectedRequest.key,
+                                                  ),
+                                                  record: selectedRequest,
+                                                ),
+                                        )
+                                      : _console
+                                      ? _consoleList(logs, false)
+                                      : _networkList(requests, false),
+                                ),
+                              ],
                             ),
+                            const JsonBeautifyScreen(),
                           ],
                         ),
                       ),
@@ -330,233 +360,138 @@ class _ViewerShellState extends State<ViewerShell> {
     ),
   );
 
-  Widget _sidebar() => Container(
-    decoration: BoxDecoration(
-      color: context.palette.sidebar,
-      border: Border(right: BorderSide(color: context.palette.line)),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: EdgeInsets.fromLTRB(20, 24, 20, 12),
-          child: Text(
-            context.l10n.workspace,
-            style: TextStyle(
-              fontSize: 10,
-              letterSpacing: 1.6,
-              color: context.palette.muted,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-        _sessionTile(
-          null,
-          context.l10n.allSessions,
-          context.l10n.sessionCount(store.sessions.length),
-          Icons.devices_outlined,
-        ),
-        Padding(
-          padding: EdgeInsets.fromLTRB(20, 26, 20, 10),
-          child: Text(
-            context.l10n.applications,
-            style: TextStyle(
-              fontSize: 10,
-              letterSpacing: 1.6,
-              color: context.palette.muted,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-        Expanded(
-          child: store.sessions.isEmpty
-              ? Padding(
-                  padding: EdgeInsets.all(20),
-                  child: Text(
-                    context.l10n.noApps,
-                    style: TextStyle(color: context.palette.muted, height: 1.7),
-                  ),
-                )
-              : ListView(
-                  children: store.sessions.values
-                      .map(
-                        (s) => _sessionTile(
-                          s.id,
-                          s.name,
-                          '${s.device} · ${s.id.substring(0, s.id.length.clamp(0, 6))}',
-                          s.platform == 'ios'
-                              ? Icons.phone_iphone
-                              : Icons.android,
-                        ),
-                      )
-                      .toList(),
-                ),
-        ),
-      ],
-    ),
-  );
-
-  Widget _sessionTile(
-    String? id,
-    String title,
-    String subtitle,
-    IconData icon,
-  ) => Container(
-    margin: EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-    decoration: BoxDecoration(
-      color: _session == id
-          ? context.palette.accent.withValues(alpha: .08)
-          : Colors.transparent,
-      borderRadius: BorderRadius.circular(7),
-    ),
-    child: ListTile(
-      dense: true,
-      contentPadding: EdgeInsets.symmetric(horizontal: 10),
-      leading: Icon(
-        icon,
-        size: 20,
-        color: _session == id ? context.palette.accent : context.palette.muted,
-      ),
-      title: Text(
-        title,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: TextStyle(fontSize: 12),
-      ),
-      subtitle: Text(
-        subtitle,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: TextStyle(fontSize: 10, color: context.palette.muted),
-      ),
-      trailing: id == null
-          ? null
-          : Tooltip(
-              message: server.isOnline(id)
-                  ? context.l10n.connected
-                  : context.l10n.disconnected,
-              child: Icon(
-                Icons.circle,
-                size: 7,
-                color: server.isOnline(id)
-                    ? context.palette.accent
-                    : context.palette.muted,
-              ),
-            ),
-      onTap: () => setState(() {
-        _session = id;
-        _networkKey = null;
-        _logId = null;
-      }),
-    ),
-  );
-
   Widget _toolbar() => Padding(
     padding: EdgeInsets.fromLTRB(20, 16, 12, 12),
     child: Row(
       children: [
-        _tab(
-          context.l10n.network,
-          Icons.swap_vert,
-          false,
-          store.network.length,
-        ),
-        SizedBox(width: 6),
-        _tab(context.l10n.console, Icons.terminal, true, store.logs.length),
-        Spacer(),
-        IconButton(
-          tooltip: store.paused
-              ? context.l10n.resumeCapture
-              : context.l10n.pauseCapture,
-          onPressed: store.togglePause,
-          icon: Icon(
-            store.paused ? Icons.play_arrow : Icons.pause,
-            size: 20,
-            color: store.paused ? context.palette.warning : null,
+        SizedBox(
+          height: 38,
+          child: Material(
+            color: context.palette.input,
+            borderRadius: BorderRadius.circular(30),
+            clipBehavior: Clip.antiAlias,
+            child: Padding(
+              padding: const EdgeInsets.all(3),
+              child: TabBar(
+                controller: _tabs,
+                isScrollable: true,
+                tabAlignment: TabAlignment.start,
+                onTap: (index) => setState(() => _activeTab = index),
+                dividerColor: Colors.transparent,
+                indicatorSize: TabBarIndicatorSize.tab,
+                indicatorAnimation: TabIndicatorAnimation.linear,
+                indicatorPadding: const EdgeInsets.symmetric(horizontal: 4),
+                indicator: AnimatedPillIndicator(
+                  animation: _tabs.animation!,
+                  color: context.palette.primaryFill,
+                  start: _tabs.previousIndex.toDouble(),
+                  end: _tabs.index.toDouble(),
+                ),
+                splashBorderRadius: BorderRadius.circular(30),
+                overlayColor: WidgetStateProperty.resolveWith(
+                  (states) => states.contains(WidgetState.hovered)
+                      ? Colors.transparent
+                      : null,
+                ),
+                labelColor: Colors.white,
+                unselectedLabelColor: context.palette.muted,
+                labelStyle: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+                unselectedLabelStyle: const TextStyle(fontSize: 13),
+                labelPadding: const EdgeInsets.symmetric(horizontal: 18),
+                tabs: [
+                  _tab(
+                    context.l10n.network,
+                    Icons.swap_vert,
+                    store.network.length,
+                  ),
+                  _tab(context.l10n.console, Icons.terminal, store.logs.length),
+                  _tab('Json beautify', Icons.data_object_rounded),
+                ],
+              ),
+            ),
           ),
         ),
-        IconButton(
-          tooltip: context.l10n.clearCapture,
-          onPressed: () {
-            store.clear();
-            setState(() {
-              _networkKey = null;
-              _logId = null;
-            });
-          },
-          icon: Icon(Icons.delete_sweep_outlined, size: 20),
-        ),
-        IconButton(
-          tooltip: context.l10n.exportCapture,
-          onPressed: store.network.isEmpty && store.logs.isEmpty
-              ? null
-              : _export,
-          icon: Icon(Icons.file_download_outlined, size: 20),
-        ),
+        if (_beautify) const Spacer(),
+        if (!_beautify) ...[
+          const SizedBox(width: 20),
+          Expanded(
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 480),
+                child: ApplicationTabs(
+                  sessions: store.sessions.values.toList(),
+                  selectedId: _session,
+                  isOnline: server.isOnline,
+                  onChanged: (id) => setState(() {
+                    _session = id;
+                    _networkKey = null;
+                    _logId = null;
+                  }),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          IconButton(
+            tooltip: store.paused
+                ? context.l10n.resumeCapture
+                : context.l10n.pauseCapture,
+            onPressed: store.togglePause,
+            icon: Icon(
+              store.paused ? Icons.play_arrow : Icons.pause,
+              size: 20,
+              color: store.paused ? context.palette.warning : null,
+            ),
+          ),
+          IconButton(
+            tooltip: context.l10n.clearCapture,
+            onPressed: () {
+              store.clear();
+              setState(() {
+                _networkKey = null;
+                _logId = null;
+              });
+            },
+            icon: Icon(Icons.delete_sweep_outlined, size: 20),
+          ),
+          IconButton(
+            tooltip: context.l10n.exportCapture,
+            onPressed: store.network.isEmpty && store.logs.isEmpty
+                ? null
+                : _export,
+            icon: Icon(Icons.file_download_outlined, size: 20),
+          ),
+        ],
       ],
     ),
   );
 
-  Widget _tab(String name, IconData icon, bool console, int count) =>
-      TextButton(
-        style: TextButton.styleFrom(
-          foregroundColor: _console == console
-              ? context.palette.accent
-              : context.palette.muted,
-          backgroundColor: _console == console
-              ? context.palette.accent.withValues(alpha: .08)
-              : Colors.transparent,
-          padding: EdgeInsets.symmetric(horizontal: 13, vertical: 14),
-        ),
-        onPressed: () => setState(() {
-          _console = console;
-        }),
-        child: Row(
-          children: [
-            Icon(icon, size: 17),
-            SizedBox(width: 8),
-            Text(name),
-            SizedBox(width: 8),
-            Text('$count', style: TextStyle(fontSize: 11)),
-          ],
-        ),
-      );
+  Widget _tab(String name, IconData icon, [int? count]) => Tab(
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 17),
+        SizedBox(width: 8),
+        Text(name),
+        if (count != null) ...[
+          SizedBox(width: 8),
+          Text('$count', style: TextStyle(fontSize: 11)),
+        ],
+      ],
+    ),
+  );
 
-  Widget _filters(bool sidebar) => Container(
+  Widget _filters() => Container(
     padding: EdgeInsets.fromLTRB(20, 0, 20, 14),
     decoration: BoxDecoration(
       border: Border(bottom: BorderSide(color: context.palette.line)),
     ),
     child: Column(
       children: [
-        if (!sidebar)
-          Padding(
-            padding: EdgeInsets.only(bottom: 10),
-            child: DropdownButtonFormField<String>(
-              key: ValueKey(_session),
-              initialValue: _session ?? '',
-              isExpanded: true,
-              decoration: InputDecoration(labelText: context.l10n.session),
-              items: [
-                DropdownMenuItem(
-                  value: '',
-                  child: Text(context.l10n.allSessions),
-                ),
-                ...store.sessions.values.map(
-                  (s) => DropdownMenuItem(
-                    value: s.id,
-                    child: Text(
-                      '${s.name} · ${s.device} · ${s.id}',
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ),
-              ],
-              onChanged: (value) => setState(() {
-                _session = value == '' ? null : value;
-              }),
-            ),
-          ),
         Row(
           children: [
             Expanded(
@@ -588,7 +523,7 @@ class _ViewerShellState extends State<ViewerShell> {
                 _level,
                 ['All levels', 'log', 'info', 'warn', 'error', 'debug'],
                 (v) => setState(() => _level = v),
-                125,
+                140,
               )
             else ...[
               _dropdown(
@@ -604,14 +539,22 @@ class _ViewerShellState extends State<ViewerShell> {
                   'OPTIONS',
                 ],
                 (v) => setState(() => _method = v),
-                135,
+                150,
+                colorFor: (v) =>
+                    v == 'All methods' ? null : context.palette.methodColor(v),
               ),
               SizedBox(width: 8),
               _dropdown(
                 _status,
                 ['All statuses', 'Success', 'Errors', 'Pending'],
                 (v) => setState(() => _status = v),
-                135,
+                150,
+                colorFor: (v) => switch (v) {
+                  'Success' => context.palette.accent,
+                  'Errors' => context.palette.danger,
+                  'Pending' => context.palette.muted,
+                  _ => null,
+                },
               ),
             ],
           ],
@@ -624,31 +567,22 @@ class _ViewerShellState extends State<ViewerShell> {
     String value,
     List<String> values,
     ValueChanged<String> onChanged,
-    double width,
-  ) => SizedBox(
+    double width, {
+    Color? Function(String)? colorFor,
+  }) => SizedBox(
     width: width,
-    child: DropdownButtonFormField<String>(
-      key: ValueKey(value),
-      initialValue: value,
-      isExpanded: true,
-      style: TextStyle(
-        fontSize: 12,
-        color: Theme.of(context).colorScheme.onSurface,
-      ),
-      items: values
+    child: ViewerDropdown<String>(
+      value: value,
+      options: values
           .map(
-            (v) => DropdownMenuItem(
-              value: v,
-              child: Text(
-                filterLabel(context, v),
-                overflow: TextOverflow.ellipsis,
-              ),
+            (v) => DropdownOption(
+              v,
+              filterLabel(context, v),
+              color: colorFor?.call(v),
             ),
           )
           .toList(),
-      onChanged: (v) {
-        if (v != null) onChanged(v);
-      },
+      onChanged: onChanged,
     ),
   );
 
@@ -735,9 +669,7 @@ class _ViewerShellState extends State<ViewerShell> {
                             alignment: Alignment.centerLeft,
                             child: StatusChip(
                               r.method,
-                              color: r.method == 'GET'
-                                  ? context.palette.accent
-                                  : context.palette.method,
+                              color: context.palette.methodColor(r.method),
                             ),
                           ),
                         ),
@@ -774,11 +706,11 @@ class _ViewerShellState extends State<ViewerShell> {
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               fontSize: 11,
-                              color: r.failed
-                                  ? context.palette.danger
-                                  : r.pending
-                                  ? context.palette.muted
-                                  : context.palette.accent,
+                              fontWeight: FontWeight.w600,
+                              color: context.palette.statusColor(
+                                r.status,
+                                transportError: r.error.isNotEmpty,
+                              ),
                             ),
                           ),
                         ),

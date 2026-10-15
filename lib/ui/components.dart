@@ -238,23 +238,7 @@ class _DataSectionState extends State<DataSection> {
               ),
             )
           else if (widget.body && _isJson && !_tree)
-            ExpansionTile(
-              key: const ValueKey('formatted-json-section'),
-              initiallyExpanded: widget.initiallyExpanded,
-              expandedCrossAxisAlignment: CrossAxisAlignment.stretch,
-              tilePadding: EdgeInsets.zero,
-              dense: true,
-              visualDensity: VisualDensity.compact,
-              shape: const Border(),
-              collapsedShape: const Border(),
-              title: Text(
-                _decoded is Map || _decoded is List
-                    ? '${_decoded is Map ? '{…}' : '[…]'}  ${context.l10n.itemCount(_decoded.length as int)}'
-                    : 'JSON',
-                style: mono.copyWith(color: context.palette.accent),
-              ),
-              children: [JsonCodeView(value: _decoded)],
-            )
+            JsonCodeView(value: _decoded)
           else if (widget.body && _isJson && _tree)
             JsonTreeView(
               value: _decoded,

@@ -3,16 +3,20 @@ import 'package:flutter/material.dart';
 import '../l10n/strings.dart';
 import '../services/app_settings.dart';
 import '../services/viewer_server.dart';
+import '../services/viewer_mcp_server.dart';
 import 'components.dart';
+import 'viewer_dropdown.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({
     super.key,
     required this.settings,
     required this.server,
+    required this.mcpServer,
   });
   final AppSettings settings;
   final ViewerServer server;
+  final ViewerMcpServer mcpServer;
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -20,10 +24,13 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   late final TextEditingController _port;
+  late final TextEditingController _mcpPort;
   bool _savingLanguage = false;
   bool _savingTheme = false;
   bool _savingPort = false;
   bool _invalidPort = false;
+  bool _savingMcp = false;
+  bool _invalidMcpPort = false;
 
   @override
   void initState() {
@@ -32,11 +39,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
       text:
           '${widget.settings.preferences?.getInt('viewerPort') ?? widget.server.port}',
     );
+    _mcpPort = TextEditingController(text: '${widget.settings.mcpPort}');
   }
 
   @override
   void dispose() {
     _port.dispose();
+    _mcpPort.dispose();
     super.dispose();
   }
 
@@ -94,37 +103,78 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _notice(String text) =>
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
 
+  Future<void> _changeMcp(bool enabled) async {
+    setState(() => _savingMcp = true);
+    try {
+      await widget.settings.setMcpEnabled(enabled);
+      await widget.mcpServer.configure(
+        enabled: enabled,
+        port: widget.settings.mcpPort,
+      );
+    } catch (_) {
+      if (mounted) _notice(context.l10n.settingsSaveFailed);
+    } finally {
+      if (mounted) setState(() => _savingMcp = false);
+    }
+  }
+
+  Future<void> _saveMcpPort() async {
+    final port = int.tryParse(_mcpPort.text.trim());
+    setState(() => _invalidMcpPort = port == null || port < 1 || port > 65535);
+    if (_invalidMcpPort) return;
+    setState(() => _savingMcp = true);
+    try {
+      final changed = widget.settings.mcpPort != port;
+      await widget.settings.setMcpPort(port!);
+      await widget.mcpServer.configure(
+        enabled: widget.settings.mcpEnabled,
+        port: port,
+        restart: !changed,
+      );
+      if (mounted && widget.mcpServer.error == null) {
+        _notice(context.l10n.portSaved);
+      }
+    } catch (_) {
+      if (mounted) _notice(context.l10n.settingsSaveFailed);
+    } finally {
+      if (mounted) setState(() => _savingMcp = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) => ListenableBuilder(
-    listenable: Listenable.merge([widget.settings, widget.server]),
+    listenable: Listenable.merge([
+      widget.settings,
+      widget.server,
+      widget.mcpServer,
+    ]),
     builder: (context, child) => Scaffold(
       appBar: AppBar(
         title: Text(context.l10n.settings),
         backgroundColor: context.palette.surface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
       ),
-      body: Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 820),
-          child: ListView(
-            padding: const EdgeInsets.all(28),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final horizontalPadding = constraints.maxWidth > 820
+              ? (constraints.maxWidth - 764) / 2
+              : 28.0;
+          return ListView(
+            padding: EdgeInsets.symmetric(
+              horizontal: horizontalPadding,
+              vertical: 28,
+            ),
             children: [
               _section(Icons.tune, context.l10n.appearance, [
                 _field(
                   context.l10n.theme,
-                  DropdownButtonFormField<ThemeMode>(
-                    key: ValueKey(widget.settings.themeMode),
-                    initialValue: widget.settings.themeMode,
-                    isExpanded: true,
-                    items: [
-                      DropdownMenuItem(
-                        value: ThemeMode.light,
-                        child: Text(context.l10n.lightTheme),
-                      ),
-                      DropdownMenuItem(
-                        value: ThemeMode.dark,
-                        child: Text(context.l10n.darkTheme),
-                      ),
+                  ViewerDropdown<ThemeMode>(
+                    value: widget.settings.themeMode,
+                    options: [
+                      DropdownOption(ThemeMode.light, context.l10n.lightTheme),
+                      DropdownOption(ThemeMode.dark, context.l10n.darkTheme),
                     ],
                     onChanged: _savingTheme ? null : _changeTheme,
                   ),
@@ -132,13 +182,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 20),
                 _field(
                   context.l10n.language,
-                  DropdownButtonFormField<String>(
-                    key: ValueKey(widget.settings.languageCode),
-                    initialValue: widget.settings.languageCode,
-                    isExpanded: true,
-                    items: const [
-                      DropdownMenuItem(value: 'vi', child: Text('Tiếng Việt')),
-                      DropdownMenuItem(value: 'en', child: Text('English')),
+                  ViewerDropdown<String>(
+                    value: widget.settings.languageCode,
+                    options: const [
+                      DropdownOption('vi', 'Tiếng Việt'),
+                      DropdownOption('en', 'English'),
                     ],
                     onChanged: _savingLanguage ? null : _changeLanguage,
                   ),
@@ -149,6 +197,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 _field(
                   context.l10n.webSocketPort,
                   TextField(
+                    key: const ValueKey('viewer-port'),
                     controller: _port,
                     keyboardType: TextInputType.number,
                     enabled: !_savingPort && !widget.server.busy,
@@ -181,12 +230,230 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ),
               ]),
+              const SizedBox(height: 20),
+              _mcpSection(),
+            ],
+          );
+        },
+      ),
+    ),
+  );
+
+  Widget _mcpSection() {
+    final mcp = widget.mcpServer;
+    final busy = _savingMcp || mcp.busy;
+    final status = StatusChip(
+      mcp.busy
+          ? context.l10n.starting
+          : mcp.running
+          ? context.l10n.mcpListening
+          : widget.settings.mcpEnabled
+          ? context.l10n.serverStopped
+          : context.l10n.mcpDisabled,
+      color: mcp.running ? context.palette.accent : context.palette.muted,
+    );
+    final port = _field(
+      context.l10n.mcpPort,
+      TextField(
+        key: const ValueKey('mcp-port'),
+        controller: _mcpPort,
+        keyboardType: TextInputType.number,
+        enabled: !busy,
+        decoration: InputDecoration(
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 14,
+          ),
+          errorText: _invalidMcpPort ? context.l10n.portValidation : null,
+          errorMaxLines: 4,
+        ),
+        onChanged: (_) {
+          if (_invalidMcpPort) setState(() => _invalidMcpPort = false);
+        },
+        onSubmitted: (_) {
+          if (!busy) _saveMcpPort();
+        },
+      ),
+    );
+    final endpoint = _field(
+      context.l10n.mcpEndpoint,
+      Container(
+        constraints: const BoxConstraints(minHeight: 44),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: context.palette.input,
+          borderRadius: BorderRadius.circular(7),
+        ),
+        child: Center(
+          widthFactor: 1,
+          heightFactor: 1,
+          child: SelectableText(mcp.endpoint, style: mono),
+        ),
+      ),
+    );
+    return _section(
+      Icons.hub_outlined,
+      'MCP',
+      [
+        if (mcp.error != null) ...[
+          Text(
+            context.l10n.serverStartFailed(mcp.error!),
+            key: const ValueKey('mcp-error'),
+            style: TextStyle(color: context.palette.danger),
+          ),
+          const SizedBox(height: 16),
+        ],
+        LayoutBuilder(
+          builder: (context, constraints) => constraints.maxWidth >= 680
+              ? Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(width: 160, child: port),
+                    const SizedBox(width: 20),
+                    Expanded(child: endpoint),
+                  ],
+                )
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [port, const SizedBox(height: 16), endpoint],
+                ),
+        ),
+        const SizedBox(height: 20),
+        SizedBox(
+          width: double.infinity,
+          child: Wrap(
+            alignment: WrapAlignment.end,
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              OutlinedButton.icon(
+                key: const ValueKey('save-mcp-port'),
+                onPressed: busy ? null : _saveMcpPort,
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(0, 44),
+                  visualDensity: VisualDensity.standard,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                icon: const Icon(Icons.save_outlined, size: 18),
+                label: Text(
+                  _savingMcp ? context.l10n.saving : context.l10n.saveRestart,
+                ),
+              ),
+              _mcpCopyButton(),
+            ],
+          ),
+        ),
+      ],
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          status,
+          const SizedBox(width: 12),
+          Tooltip(
+            message: context.l10n.enableMcp,
+            child: Semantics(
+              label: context.l10n.enableMcp,
+              child: Switch(
+                key: const ValueKey('mcp-enabled'),
+                value: widget.settings.mcpEnabled,
+                onChanged: busy ? null : _changeMcp,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _mcpCopyButton() {
+    final mcp = widget.mcpServer;
+    return MenuAnchor(
+      consumeOutsideTap: true,
+      alignmentOffset: const Offset(0, 6),
+      style: MenuStyle(
+        backgroundColor: WidgetStatePropertyAll(context.palette.surface),
+        surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
+        padding: const WidgetStatePropertyAll(EdgeInsets.all(6)),
+        shape: WidgetStatePropertyAll(
+          RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: context.palette.line),
+          ),
+        ),
+      ),
+      menuChildren: [
+        MenuItemButton(
+          key: const ValueKey('copy-mcp-json'),
+          onPressed: () => copyText(context, mcp.clientConfiguration),
+          style: const ButtonStyle(
+            minimumSize: WidgetStatePropertyAll(Size(0, 44)),
+          ),
+          leadingIcon: const Icon(Icons.data_object, size: 18),
+          child: Text(context.l10n.copyMcpJson),
+        ),
+        MenuItemButton(
+          key: const ValueKey('copy-mcp-codex'),
+          onPressed: () => copyText(context, mcp.codexConfiguration),
+          style: const ButtonStyle(
+            minimumSize: WidgetStatePropertyAll(Size(0, 44)),
+          ),
+          leadingIcon: const Icon(Icons.terminal, size: 18),
+          child: Text(context.l10n.copyMcpCodex),
+        ),
+      ],
+      builder: (context, controller, child) => ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: ColoredBox(
+          color: context.palette.primaryFill,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: FilledButton.icon(
+                  key: const ValueKey('copy-mcp-setup'),
+                  onPressed: () => copyText(context, mcp.setupCommand),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size(0, 44),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    backgroundColor: Colors.transparent,
+                    foregroundColor: Colors.white,
+                    shape: const RoundedRectangleBorder(),
+                  ),
+                  icon: const Icon(Icons.copy_outlined, size: 18),
+                  label: Text(context.l10n.copyMcpSetup),
+                ),
+              ),
+              Container(
+                width: 1,
+                height: 24,
+                color: Colors.white.withValues(alpha: .3),
+              ),
+              Semantics(
+                expanded: controller.isOpen,
+                child: IconButton(
+                  key: const ValueKey('copy-mcp-formats'),
+                  tooltip: context.l10n.mcpOtherFormats,
+                  onPressed: () => controller.isOpen
+                      ? controller.close()
+                      : controller.open(),
+                  style: IconButton.styleFrom(
+                    minimumSize: const Size(44, 44),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    foregroundColor: Colors.white,
+                    shape: const RoundedRectangleBorder(),
+                  ),
+                  icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 20),
+                ),
+              ),
             ],
           ),
         ),
       ),
-    ),
-  );
+    );
+  }
 
   Widget _field(String title, Widget input) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
@@ -197,7 +464,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     ],
   );
 
-  Widget _section(IconData icon, String title, List<Widget> children) => Card(
+  Widget _section(
+    IconData icon,
+    String title,
+    List<Widget> children, {
+    Widget? trailing,
+  }) => Card(
     margin: EdgeInsets.zero,
     child: Padding(
       padding: const EdgeInsets.all(24),
@@ -208,13 +480,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
             children: [
               Icon(icon, size: 20, color: context.palette.accent),
               const SizedBox(width: 12),
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
+              ?trailing,
             ],
           ),
           const SizedBox(height: 24),

@@ -2,12 +2,65 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rn_network_viewer/main.dart';
 import 'package:rn_network_viewer/services/capture_store.dart';
 import 'package:rn_network_viewer/services/viewer_server.dart';
+import 'package:rn_network_viewer/ui/viewer_dropdown.dart';
+import 'package:rn_network_viewer/ui/json_code_view.dart';
 
 void main() {
+  testWidgets(
+    'filter menu selects a method and dismisses with Escape or outside tap',
+    (tester) async {
+      tester.view.physicalSize = const Size(860, 740);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final store = CaptureStore()
+        ..ingest(
+          jsonDecode(
+            File('test/fixtures/sdk_envelope.json').readAsStringSync(),
+          ),
+        );
+      final server = ViewerServer(store);
+      await tester.pumpWidget(ViewerApp(store: store, server: server));
+      await tester.tap(find.text('All methods'));
+      await tester.pumpAndSettle();
+      expect(find.text('OPTIONS').hitTestable(), findsOneWidget);
+      expect(find.byIcon(Icons.check_rounded), findsOneWidget);
+      await tester.tap(
+        find.descendant(
+          of: find.byType(MenuItemButton),
+          matching: find.text('POST'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(MenuItemButton), findsNothing);
+      expect(find.text('/orders?draft=true'), findsOneWidget);
+      expect(find.text('/feed'), findsNothing);
+      expect(find.text('/profile'), findsNothing);
+
+      final dropdown = find.widgetWithText(ViewerDropdown<String>, 'POST');
+      await tester.tap(dropdown);
+      await tester.pumpAndSettle();
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      expect(find.byType(MenuItemButton), findsNothing);
+      await tester.tap(dropdown);
+      await tester.pumpAndSettle();
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+      expect(find.byType(MenuItemButton), findsNothing);
+      expect(find.text('/orders?draft=true'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+      server.dispose();
+      store.dispose();
+    },
+  );
+
   testWidgets('inspector dialog updates when a pending request completes', (
     tester,
   ) async {
@@ -68,10 +121,27 @@ void main() {
       expect(find.textContaining('"id": 42'), findsOneWidget);
       final pane = find.byKey(const ValueKey('inspector-pane'));
       final divider = find.byKey(const ValueKey('inspector-divider'));
+      void expectJsonFillsInspector() {
+        final json = find.byType(JsonCodeView);
+        final expectedWidth = tester.getSize(pane).width - 36;
+        expect(tester.getSize(json).width, closeTo(expectedWidth, .01));
+        final viewport = find.descendant(
+          of: json,
+          matching: find.byType(SingleChildScrollView),
+        );
+        expect(
+          tester.getSize(viewport).width,
+          closeTo(expectedWidth - 2, .01),
+          reason: 'The viewport fills the frame inside its 1px border',
+        );
+      }
+
+      expectJsonFillsInspector();
       final initialWidth = tester.getSize(pane).width;
       await tester.drag(divider, const Offset(-240, 0));
       await tester.pumpAndSettle();
       expect(tester.getSize(pane).width, greaterThan(initialWidth + 200));
+      expectJsonFillsInspector();
       expect(find.textContaining('"id": 42'), findsOneWidget);
       await tester.drag(divider, const Offset(-2000, 0));
       await tester.pumpAndSettle();
@@ -81,11 +151,16 @@ void main() {
       );
       tester.view.physicalSize = const Size(1200, 900);
       await tester.pumpAndSettle();
-      expect(tester.getSize(pane).width, lessThanOrEqualTo(612));
+      expect(tester.getSize(pane).width, lessThanOrEqualTo(832));
+      expectJsonFillsInspector();
       expect(tester.takeException(), isNull);
       await tester.drag(divider, const Offset(2000, 0));
       await tester.pumpAndSettle();
       expect(tester.getSize(pane).width, 320);
+      expectJsonFillsInspector();
+      await tester.tap(find.byKey(const ValueKey('json-fold-0')));
+      await tester.pumpAndSettle();
+      expectJsonFillsInspector();
       await tester.tap(divider);
       await tester.pump(const Duration(milliseconds: 50));
       await tester.tap(divider);

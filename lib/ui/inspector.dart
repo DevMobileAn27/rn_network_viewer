@@ -42,13 +42,17 @@ class NetworkInspector extends StatelessWidget {
           padding: EdgeInsets.symmetric(horizontal: 18, vertical: 8),
           child: Row(
             children: [
-              StatusChip(record.method),
+              StatusChip(
+                record.method,
+                color: context.palette.methodColor(record.method),
+              ),
               SizedBox(width: 8),
               StatusChip(
                 filterLabel(context, record.state),
-                color: record.failed
-                    ? context.palette.danger
-                    : context.palette.accent,
+                color: context.palette.statusColor(
+                  record.status,
+                  transportError: record.error.isNotEmpty,
+                ),
               ),
               Spacer(),
               Text(
