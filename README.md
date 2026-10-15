@@ -5,6 +5,10 @@
 - [Source và bản phát hành Viewer](https://github.com/DevMobileAn27/rn_network_viewer)
 - [Thư viện React Native trên npm](https://www.npmjs.com/package/@quocandev27/rn_network_debugger)
 
+Ảnh minh họa được chụp trực tiếp từ app trên macOS, giao diện sáng, với dữ liệu mẫu **Shop Demo**.
+
+![Network: danh sách request và response JSON có thu gọn nhánh](docs/screenshots/network.png)
+
 ## Mở ứng dụng
 
 1. Giải nén bản build dành cho hệ điều hành của bạn.
@@ -112,12 +116,16 @@ Kéo đường chia giữa danh sách và chi tiết để điều chỉnh độ
 3. Dùng **All levels** để lọc `log`, `info`, `warn`, `error` hoặc `debug`.
 4. Chọn một dòng để xem chi tiết. Mở các nhánh trong **Arguments** để xem object và array.
 
+![Console: lọc log theo cấp độ và xem dữ liệu object trong Arguments](docs/screenshots/console.png)
+
 ## Json beautify
 
 1. Mở **Json beautify**.
 2. Dán JSON vào **Input**.
 3. Bấm **Format**, hoặc nhấn **⌘ Enter** trên macOS / **Ctrl Enter** trên Windows.
 4. Chọn **JSON** hoặc **Tree** để xem kết quả. Dùng biểu tượng copy để sao chép JSON đã định dạng.
+
+![Json beautify: input JSON và kết quả có tô màu, số dòng, thu gọn nhánh](docs/screenshots/json-beautify.png)
 
 Trong chế độ **JSON**, bấm mũi tên cạnh số dòng để mở/thu gọn object hoặc array. Nếu input không hợp lệ, popup hiển thị lỗi và vị trí dòng/cột; bạn có thể sửa input và Format lại.
 
@@ -131,6 +139,8 @@ MCP mặc định **tắt**. Kết nối AI như sau:
 2. Kiểm tra trạng thái **Listening** và địa chỉ **Endpoint**. Cổng MCP mặc định là `38941`.
 3. Bấm **Copy setup command**, rồi dán vào AI để thiết lập kết nối. Nội dung bao gồm endpoint hiện tại, lệnh cho Claude Code/Codex CLI và cấu hình cho client khác.
 4. Giữ Viewer mở, chạy app React Native và yêu cầu AI đọc dữ liệu.
+
+![Cài đặt MCP: công tắc, trạng thái Listening, cổng, endpoint và nút sao chép thiết lập](docs/screenshots/mcp.png)
 
 Mũi tên bên phải nút sao chép có thêm **Copy JSON config** và **Copy Codex config**. Nếu đổi **MCP port**, bấm **Save & restart**, sau đó cập nhật cấu hình ở client AI.
 
@@ -195,6 +205,8 @@ Nhấn biểu tượng **bánh răng** để mở **Settings**.
 | **Theme** | Light (Sáng) hoặc Dark (Đêm); mặc định **Light** |
 | **WebSocket port** | Cổng nhận dữ liệu từ app React Native; mặc định `38940` |
 | **MCP** | Mặc định tắt; cổng `38941` |
+
+![Cài đặt ngôn ngữ, giao diện, cổng kết nối và MCP](docs/screenshots/settings.png)
 
 Ngôn ngữ, giao diện, cổng và lựa chọn bật MCP được ghi nhớ cho lần mở sau. Ngôn ngữ và giao diện áp dụng ngay.
 
