@@ -14,7 +14,7 @@ dependencies:
   flutter_localizations:
     sdk: flutter
 
-  intl: ^0.20.2
+  intl: ^0.20.3
   mcp_dart: ^2.4.3
 dev_dependencies:
   flutter_test:
