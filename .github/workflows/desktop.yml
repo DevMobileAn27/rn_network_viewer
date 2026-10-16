@@ -1,17 +1,17 @@
-name: Build desktop release
-run-name: ${{ github.event_name == 'push' && format('Build release {0}', github.ref_name) || format('Manual build · {0}', github.ref_name) }}
+name: Build and draft release
+run-name: ${{ github.event_name == 'push' && format('Release · {0}', github.event.head_commit.message) || format('Manual release · {0}', github.ref_name) }}
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches: [main]
+    paths: [pubspec.yaml]
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: desktop-build-${{ github.ref }}
+  group: desktop-release
   cancel-in-progress: false
 
 jobs:
@@ -19,37 +19,30 @@ jobs:
     name: Validate release version
     runs-on: ubuntu-latest
     outputs:
+      should_release: ${{ steps.version.outputs.should_release }}
       version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+      title: ${{ steps.version.outputs.title }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Require main branch
+        run: |
+          if [ "$GITHUB_REF" != refs/heads/main ]; then
+            echo '::error::Run release builds from main.'
+            exit 1
+          fi
       - name: Read version and verify tag
         id: version
         env:
-          RELEASE_TAG: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
-        run: |
-          python3 - <<'PY'
-          import os
-          import re
-          from pathlib import Path
-
-          source = Path('pubspec.yaml').read_text()
-          match = re.search(r'^version:\s*([0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?)(?:\+[0-9A-Za-z.-]+)?\s*$', source, re.M)
-          if not match:
-              raise SystemExit('::error::No valid app version found in pubspec.yaml')
-          version = match.group(1)
-          tag = os.environ['RELEASE_TAG']
-          if tag and tag != f'v{version}':
-              raise SystemExit(f'::error::Tag {tag} does not match app version {version}. Tag the release commit instead.')
-          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
-              output.write(f'version={version}\n')
-          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
-              summary.write(f'## Desktop build {version}\n\nCommit: `{os.environ["GITHUB_SHA"]}`\n\n')
-              summary.write('Download the ZIPs from **Artifacts** after all builds succeed. This workflow does not publish a GitHub Release.\n')
-          PY
+          BEFORE_COMMIT: ${{ github.event_name == 'push' && github.event.before || '' }}
+        run: python3 tool/prepare_github_release.py
 
   checks:
     name: Check source
     needs: version
+    if: needs.version.outputs.should_release == 'true'
     uses: ./.github/workflows/checks.yml
 
   build:
@@ -94,7 +87,7 @@ jobs:
           lipo -verify_arch ${{ matrix.arch }} "build/macos/Build/Products/Release/RN Network Viewer.app/Contents/MacOS/RN Network Viewer"
           ditto -c -k --sequesterRsrc --keepParent "build/macos/Build/Products/Release/RN Network Viewer.app" "build/release/$ARCHIVE_NAME.zip"
           cd build/release
-          shasum -a 256 "$ARCHIVE_NAME.zip" > SHA256SUMS.txt
+          shasum -a 256 "$ARCHIVE_NAME.zip" > "$ARCHIVE_NAME.sha256"
       - name: Package Windows
         if: matrix.target == 'windows'
         shell: pwsh
@@ -103,7 +96,7 @@ jobs:
           $archive = "$env:ARCHIVE_NAME.zip"
           Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath "build/release/$archive"
           $hash = (Get-FileHash "build/release/$archive" -Algorithm SHA256).Hash.ToLower()
-          "$hash  $archive" | Set-Content build/release/SHA256SUMS.txt
+          "$hash  $archive" | Set-Content "build/release/$env:ARCHIVE_NAME.sha256"
       - name: Upload app (kept for 7 days)
         uses: actions/upload-artifact@v4
         with:
@@ -111,3 +104,49 @@ jobs:
           path: build/release/*
           if-no-files-found: error
           retention-days: 7
+
+  release:
+    name: Create draft ${{ needs.version.outputs.tag }}
+    needs: [version, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: ${{ needs.version.outputs.tag }}
+      RELEASE_TITLE: ${{ needs.version.outputs.title }}
+      RELEASE_VERSION: ${{ needs.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Prepare description and recheck tag
+        run: python3 tool/prepare_github_release.py
+      - name: Download all three app builds
+        uses: actions/download-artifact@v4
+        with:
+          pattern: rn-network-viewer-${{ needs.version.outputs.version }}-*
+          path: dist
+          merge-multiple: true
+      - name: Verify downloads and generate checksums
+        run: |
+          cd dist
+          for platform in macos-arm64 macos-x86_64 windows-x64; do
+            test -s "rn-network-viewer-$RELEASE_VERSION-$platform.zip"
+          done
+          sha256sum --check ./*.sha256
+          sha256sum ./*.zip > SHA256SUMS.txt
+      - name: Create draft with app downloads
+        run: |
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            echo "::error::Release $RELEASE_TAG already exists. It will not be overwritten."
+            exit 1
+          fi
+          gh release create "$RELEASE_TAG" \
+            --draft \
+            --target "$GITHUB_SHA" \
+            --title "$RELEASE_TITLE" \
+            --notes-file build/release-notes.md \
+            dist/*.zip dist/SHA256SUMS.txt
+          printf '## Draft ready\n\nReview and publish: %s\n' \
+            "$(gh release view "$RELEASE_TAG" --json url --jq .url)" >> "$GITHUB_STEP_SUMMARY"

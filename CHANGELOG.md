@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.2 — 2026-10-16
+
+- Create a draft GitHub Release when the app version increases on main, using the tag, title and description in github_release_info.md.
+- Build and attach separate macOS Apple Silicon, macOS Intel and Windows x64 ZIPs with SHA256 checksums.
+- Separate pull request checks from release builds, and retain workflow artifacts for 7 days.
+- Validate release metadata and reject tags pointing to a different commit.
+
 ## 0.1.1 — 2026-10-16
 
 - Add success, error, warning and informational popups for Settings actions in English and Vietnamese.
