@@ -1,6 +1,10 @@
 # Changelog
 
-## Unreleased — coordinated security upgrade
+## 0.1.1 — 2026-10-16
+
+- Add success, error, warning and informational popups for Settings actions in English and Vietnamese.
+- Add JSON search, image body previews and persisted inspector tabs and panel sizes.
+- Improve request inspection, desktop controls and architecture-specific macOS builds.
 
 - Add independent, persisted switches for sensitive-data redaction and capture limits; include SDK options in copied setup.
 
