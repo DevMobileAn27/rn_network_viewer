@@ -1,22 +1,18 @@
 ---
-tag: v0.1.2
-title: RN Network Viewer v0.1.2
+tag: v0.1.3
+title: RN Network Viewer v0.1.3
 ---
 
 ## What’s new
 
-- Settings feedback popups in English and Vietnamese.
-- JSON search, image body previews, and saved inspector tabs and panel sizes.
-- Improved request inspection and desktop controls.
-- Pairing-token authentication, optional LAN access, and separate MCP authentication.
-- Sensitive-data redaction and capture limits, each with its own setting.
-- Separate downloads for macOS Apple Silicon, macOS Intel, and Windows x64.
+- Fixed macOS architecture verification in the release workflow so Apple Silicon and Intel builds can proceed to ZIP packaging.
+- Desktop downloads include separate macOS Apple Silicon, macOS Intel, and Windows x64 ZIPs with SHA256 checksums.
 
 ## Downloads
 
-- **macOS Apple Silicon (M-series):** `rn-network-viewer-0.1.2-macos-arm64.zip`
-- **macOS Intel:** `rn-network-viewer-0.1.2-macos-x86_64.zip`
-- **Windows x64:** `rn-network-viewer-0.1.2-windows-x64.zip`
+- **macOS Apple Silicon (M-series):** `rn-network-viewer-0.1.3-macos-arm64.zip`
+- **macOS Intel:** `rn-network-viewer-0.1.3-macos-x86_64.zip`
+- **Windows x64:** `rn-network-viewer-0.1.3-windows-x64.zip`
 
 On macOS, unzip and drag **RN Network Viewer.app** into **Applications**.
 On Windows, unzip and run **rn_network_viewer.exe**. Keep the DLL files and `data` folder alongside the executable.

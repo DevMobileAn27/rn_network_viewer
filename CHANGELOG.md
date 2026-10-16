@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.3 — 2026-10-16
+
+- Fix lipo argument order in macOS architecture verification before release packaging.
+- Update release metadata and download names for 0.1.3.
+
 ## 0.1.2 — 2026-10-16
 
 - Create a draft GitHub Release when the app version increases on main, using the tag, title and description in github_release_info.md.
