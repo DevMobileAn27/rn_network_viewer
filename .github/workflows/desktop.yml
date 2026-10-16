@@ -1,24 +1,79 @@
-name: Desktop checks and builds
+name: Build desktop release
+run-name: ${{ github.event_name == 'push' && format('Build release {0}', github.ref_name) || format('Manual build · {0}', github.ref_name) }}
 
 on:
   push:
-  pull_request:
+    tags:
+      - 'v*'
   workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: desktop-build-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
-  desktop:
+  version:
+    name: Validate release version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Read version and verify tag
+        id: version
+        env:
+          RELEASE_TAG: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
+        run: |
+          python3 - <<'PY'
+          import os
+          import re
+          from pathlib import Path
+
+          source = Path('pubspec.yaml').read_text()
+          match = re.search(r'^version:\s*([0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?)(?:\+[0-9A-Za-z.-]+)?\s*$', source, re.M)
+          if not match:
+              raise SystemExit('::error::No valid app version found in pubspec.yaml')
+          version = match.group(1)
+          tag = os.environ['RELEASE_TAG']
+          if tag and tag != f'v{version}':
+              raise SystemExit(f'::error::Tag {tag} does not match app version {version}. Tag the release commit instead.')
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              output.write(f'version={version}\n')
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
+              summary.write(f'## Desktop build {version}\n\nCommit: `{os.environ["GITHUB_SHA"]}`\n\n')
+              summary.write('Download the ZIPs from **Artifacts** after all builds succeed. This workflow does not publish a GitHub Release.\n')
+          PY
+
+  checks:
+    name: Check source
+    needs: version
+    uses: ./.github/workflows/checks.yml
+
+  build:
+    name: Build ${{ matrix.label }}
+    needs: [version, checks]
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: macos-latest
             target: macos
+            arch: arm64
+            label: macOS Apple Silicon
+          - os: macos-latest
+            target: macos
+            arch: x86_64
+            label: macOS Intel
           - os: windows-latest
             target: windows
+            arch: x64
+            label: Windows x64
     runs-on: ${{ matrix.os }}
+    env:
+      ARCHIVE_NAME: rn-network-viewer-${{ needs.version.outputs.version }}-${{ matrix.target }}-${{ matrix.arch }}
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
@@ -26,27 +81,33 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get
-      - run: dart format --output=none --set-exit-if-changed lib test tool
-      - run: flutter analyze
-      - run: flutter test
-      - if: matrix.target == 'macos'
-        run: bash tool/build_macos.sh
-      - if: matrix.target == 'windows'
+      - name: Build macOS
+        if: matrix.target == 'macos'
+        run: bash tool/build_macos.sh ${{ matrix.arch }}
+      - name: Build Windows
+        if: matrix.target == 'windows'
         run: flutter build windows --release
-      - if: matrix.target == 'macos'
-        run: ditto -c -k --sequesterRsrc --keepParent "build/macos/Build/Products/Release/RN Network Viewer.app" build/rn-network-viewer-macos.zip
-      - if: matrix.target == 'macos'
-        run: shasum -a 256 build/rn-network-viewer-macos.zip > build/SHA256SUMS.txt
-      - if: matrix.target == 'windows'
+      - name: Package macOS
+        if: matrix.target == 'macos'
+        run: |
+          mkdir -p build/release
+          lipo -verify_arch ${{ matrix.arch }} "build/macos/Build/Products/Release/RN Network Viewer.app/Contents/MacOS/RN Network Viewer"
+          ditto -c -k --sequesterRsrc --keepParent "build/macos/Build/Products/Release/RN Network Viewer.app" "build/release/$ARCHIVE_NAME.zip"
+          cd build/release
+          shasum -a 256 "$ARCHIVE_NAME.zip" > SHA256SUMS.txt
+      - name: Package Windows
+        if: matrix.target == 'windows'
         shell: pwsh
         run: |
-          Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath build/rn-network-viewer-windows.zip
-          $hash = (Get-FileHash build/rn-network-viewer-windows.zip -Algorithm SHA256).Hash.ToLower()
-          "$hash  rn-network-viewer-windows.zip" | Set-Content build/SHA256SUMS.txt
-      - uses: actions/upload-artifact@v4
+          New-Item -ItemType Directory -Force build/release | Out-Null
+          $archive = "$env:ARCHIVE_NAME.zip"
+          Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath "build/release/$archive"
+          $hash = (Get-FileHash "build/release/$archive" -Algorithm SHA256).Hash.ToLower()
+          "$hash  $archive" | Set-Content build/release/SHA256SUMS.txt
+      - name: Upload app (kept for 7 days)
+        uses: actions/upload-artifact@v4
         with:
-          name: rn-network-viewer-${{ matrix.target }}
-          path: |
-            build/rn-network-viewer-macos.zip
-            build/rn-network-viewer-windows.zip
-            build/SHA256SUMS.txt
+          name: ${{ env.ARCHIVE_NAME }}
+          path: build/release/*
+          if-no-files-found: error
+          retention-days: 7
