@@ -6,7 +6,15 @@ import 'dart:io';
 Future<void> main(List<String> arguments) async {
   final port = arguments.isEmpty ? 38940 : int.parse(arguments[0]);
   final hold = arguments.length < 2 ? 30 : int.parse(arguments[1]);
-  final socket = await WebSocket.connect('ws://127.0.0.1:$port/rnv/network');
+  final token = Platform.environment['RNV_VIEWER_TOKEN'];
+  if (token == null || token.isEmpty) {
+    throw StateError('Set RNV_VIEWER_TOKEN from Copy SDK setup');
+  }
+  final headers = {'Authorization': 'Bearer $token'};
+  final socket = await WebSocket.connect(
+    'ws://127.0.0.1:$port/rnv/network',
+    headers: headers,
+  );
   final fixture =
       jsonDecode(await File('test/fixtures/sdk_envelope.json').readAsString())
           as Map<String, dynamic>;
@@ -25,7 +33,10 @@ Future<void> main(List<String> arguments) async {
   for (final event in android['events']) {
     event['platform'] = 'android';
   }
-  final second = await WebSocket.connect('ws://127.0.0.1:$port/rnv/network');
+  final second = await WebSocket.connect(
+    'ws://127.0.0.1:$port/rnv/network',
+    headers: headers,
+  );
   second.add(jsonEncode(android));
   stdout.writeln(
     'Sent sample iOS + Android sessions to port $port. Holding connections for $hold seconds.',

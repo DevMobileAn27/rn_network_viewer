@@ -37,6 +37,7 @@ void main() {
     socket.write(
       'GET /rnv/network HTTP/1.1\r\n'
       'Host: 127.0.0.1:${server.port}\r\n'
+      'Authorization: Bearer ${server.accessToken}\r\n'
       'Connection: Upgrade\r\n'
       'Upgrade: websocket\r\n'
       'Sec-WebSocket-Version: 13\r\n'
@@ -62,7 +63,10 @@ void main() {
       });
       await server.start(port: 0);
       expect(server.running, isTrue);
-      final socket = await WebSocket.connect(server.localUrl);
+      final socket = await WebSocket.connect(
+        server.localUrl,
+        headers: server.connectionHeaders,
+      );
       final fixture = File(
         'test/fixtures/sdk_envelope.json',
       ).readAsStringSync();
@@ -82,7 +86,10 @@ void main() {
       await socket.close();
       await until(() => server.connections == 0);
       expect(store.network.length, 3);
-      final reconnected = await WebSocket.connect(server.localUrl);
+      final reconnected = await WebSocket.connect(
+        server.localUrl,
+        headers: server.connectionHeaders,
+      );
       reconnected.add(fixture);
       await until(() => server.isOnline('ios-session-1'));
       expect(store.network.length, 3);
@@ -107,6 +114,7 @@ void main() {
         final request = await client.getUrl(
           Uri.parse('http://127.0.0.1:${server.port}${pair.$1}'),
         );
+        server.connectionHeaders.forEach(request.headers.set);
         final response = await request.close();
         expect(response.statusCode, pair.$2);
         await response.drain<void>();
@@ -119,7 +127,7 @@ void main() {
     () async {
       final store = CaptureStore();
       final server = ViewerServer(store);
-      final occupied = await ServerSocket.bind(InternetAddress.anyIPv4, 0);
+      final occupied = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
       addTearDown(() async {
         await occupied.close();
         await server.stop();

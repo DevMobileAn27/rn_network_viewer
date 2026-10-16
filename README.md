@@ -22,61 +22,33 @@ Yêu cầu dự án React Native **0.74 trở lên**, chạy ở chế độ dev
 
 ### Cài thư viện
 
-Trong dự án React Native:
-
 ```sh
-yarn add @quocandev27/rn_network_debugger
+yarn add -D @quocandev27/rn_network_debugger
 ```
 
-Với iOS, chạy thêm trong thư mục `ios`:
+Với iOS, chạy `pod install` trong thư mục `ios`.
 
-```sh
-pod install
-```
+1. Mở **Settings → Security → Copy SDK setup** trong Viewer.
+2. Dán đoạn khởi tạo vào entry point của app, trước `AppRegistry.registerComponent`. Giữ khối `if (__DEV__)`.
+3. Đoạn cấu hình chứa **pairing token**: giữ trong file cấu hình local được Git ignore; không commit token.
+4. Build lại app native rồi gọi API hoặc ghi log.
 
-Thêm đoạn sau vào file khởi chạy, trước `AppRegistry.registerComponent`:
+**Cấu hình bảo mật mới cần nâng cấp cả Viewer lẫn SDK.** Các bản SDK cũ không gửi token sẽ bị từ chối. Xem [hướng dẫn nâng cấp và bảo mật](docs/security.md).
 
-```js
-import {bootRNNetworkDebuggerWithPort} from '@quocandev27/rn_network_debugger';
+### Chọn kết nối
 
-if (__DEV__) {
-  bootRNNetworkDebuggerWithPort(38940);
-}
-```
+Mặc định Viewer chỉ nghe tại `127.0.0.1`.
 
-Mở Viewer, sau đó build và chạy lại app React Native. Thực hiện một thao tác gọi API hoặc ghi console log để bắt đầu xem dữ liệu.
-
-### Chỉ định địa chỉ kết nối
-
-Nếu chưa kết nối được, nhấn biểu tượng **?** trên thanh công cụ Viewer để xem địa chỉ máy tính, rồi thay đoạn khởi tạo bằng:
-
-```js
-import {bootRNNetworkDebugger} from '@quocandev27/rn_network_debugger';
-
-if (__DEV__) {
-  bootRNNetworkDebugger({
-    VIEWER_HOST: '192.168.1.10',
-    VIEWER_PORT: 38940,
-  });
-}
-```
-
-Chọn `VIEWER_HOST` theo thiết bị:
-
-| Thiết bị | `VIEWER_HOST` |
+| Thiết bị | Cách kết nối |
 | --- | --- |
-| iOS Simulator trên cùng máy Mac | `127.0.0.1` |
-| Android Emulator trên cùng máy tính | `10.0.2.2` |
-| Điện thoại qua Wi-Fi | IP LAN của máy tính chạy Viewer, ví dụ `192.168.1.10` |
-| Android qua USB | `127.0.0.1`, sau khi chạy lệnh bên dưới |
+| iOS Simulator cùng máy Mac | Giữ URL đã copy |
+| Android Emulator | Đổi host trong `VIEWER_URL` thành `10.0.2.2` |
+| Android qua USB | Chạy `adb reverse tcp:38940 tcp:38940`, giữ host `127.0.0.1` |
+| Điện thoại qua Wi-Fi | Bật **Allow LAN connections**, chọn IP máy tính và subnet của mạng, bấm **Apply & restart**, rồi copy lại SDK setup |
 
-Với Android qua USB:
+Ví dụ subnet: `192.168.1.0/24`; dùng subnet thực tế của mạng, không mặc định mọi mạng đều là `/24`. Cho phép firewall trên interface đã chọn nếu cần.
 
-```sh
-adb reverse tcp:38940 tcp:38940
-```
-
-Với Wi-Fi, điện thoại và máy tính cần cùng mạng. Reload app React Native sau khi đổi địa chỉ hoặc cổng. Xem thêm cấu hình SDK tại [trang thư viện](https://www.npmjs.com/package/@quocandev27/rn_network_debugger).
+LAN cần token và chỉ chấp nhận địa chỉ nguồn thuộc subnet đã cấu hình. `ws://` không mã hóa dữ liệu; dùng mạng tin cậy, USB hoặc [cấu hình WSS](docs/security.md#wss). Không mở port forwarding hoặc public tunnel.
 
 ## Chọn ứng dụng
 
@@ -144,34 +116,7 @@ MCP mặc định **tắt**. Kết nối AI như sau:
 
 Mũi tên bên phải nút sao chép có thêm **Copy JSON config** và **Copy Codex config**. Nếu đổi **MCP port**, bấm **Save & restart**, sau đó cập nhật cấu hình ở client AI.
 
-Với cổng mặc định, có thể thêm trực tiếp qua terminal:
-
-```sh
-# Claude Code
-claude mcp add --transport http --scope user rn-network-viewer http://127.0.0.1:38941/mcp
-
-# Codex CLI
-codex mcp add rn-network-viewer --url http://127.0.0.1:38941/mcp
-```
-
-Client hỗ trợ cấu hình JSON cho HTTP MCP:
-
-```json
-{
-  "mcpServers": {
-    "rn-network-viewer": {
-      "url": "http://127.0.0.1:38941/mcp"
-    }
-  }
-}
-```
-
-Với Codex, cấu hình TOML tương ứng:
-
-```toml
-[mcp_servers.rn-network-viewer]
-url = "http://127.0.0.1:38941/mcp"
-```
+Cấu hình đã copy có token MCP riêng. Giữ cấu hình này riêng tư; sau khi **Reset MCP token**, copy và cập nhật lại client AI.
 
 Client AI cần chạy trên cùng máy tính. Với client chỉ hỗ trợ stdio, **Copy setup command** có cấu hình dùng `mcp-remote`, cần Node.js. ChatGPT web/cloud không truy cập trực tiếp được endpoint localhost này; cần client hỗ trợ MCP cục bộ.
 
@@ -193,7 +138,7 @@ Các nút trên thanh công cụ:
 | **Clear** | Xóa request và log hiện có của tất cả ứng dụng |
 | **Export** | Lưu file JSON gồm dữ liệu đang giữ của tất cả ứng dụng, kể cả các mục bị ẩn bởi bộ lọc |
 
-Viewer giữ tối đa 5.000 request/log và khoảng 64 MiB dữ liệu capture; các mục cũ được bỏ dần khi chạm giới hạn. Xuất dữ liệu trước khi đóng app nếu cần giữ lại lịch sử. MCP cũng đọc dữ liệu hiện đang được Viewer giữ.
+Khi **Limit capture** bật (mặc định), Viewer giữ tối đa 5.000 request/log và khoảng 64 MiB dữ liệu capture; các mục cũ được bỏ dần khi chạm giới hạn. Xuất dữ liệu trước khi đóng app nếu cần giữ lại lịch sử. MCP cũng đọc dữ liệu hiện đang được Viewer giữ.
 
 ## Cài đặt
 
@@ -204,20 +149,34 @@ Nhấn biểu tượng **bánh răng** để mở **Settings**.
 | **Language** | English hoặc Tiếng Việt; mặc định **English** |
 | **Theme** | Light (Sáng) hoặc Dark (Đêm); mặc định **Light** |
 | **WebSocket port** | Cổng nhận dữ liệu từ app React Native; mặc định `38940` |
-| **MCP** | Mặc định tắt; cổng `38941` |
+| **MCP** | Mặc định tắt; localhost, token riêng, cổng `38941` |
+| **Security** | LAN mặc định tắt; subnet, token, che dữ liệu và giới hạn capture |
 
 ![Cài đặt ngôn ngữ, giao diện, cổng kết nối và MCP](docs/screenshots/settings.png)
 
-Ngôn ngữ, giao diện, cổng và lựa chọn bật MCP được ghi nhớ cho lần mở sau. Ngôn ngữ và giao diện áp dụng ngay.
+Ngôn ngữ, giao diện, cổng, cấu hình bảo mật và lựa chọn bật MCP được ghi nhớ cho lần mở sau. Ngôn ngữ và giao diện áp dụng ngay.
 
 Để đổi cổng kết nối React Native, nhập **WebSocket port** mới và bấm **Save & restart**. Đổi cổng trong đoạn khởi tạo SDK cho trùng với Viewer rồi Reload app. Với Android qua USB, chạy lại `adb reverse` theo cổng mới.
+
+### Tùy chọn capture
+
+Trong **Settings → Security** có hai công tắc độc lập, mặc định bật:
+
+- **Redact sensitive data / Che dữ liệu nhạy cảm**: bật để che token/password/header nhạy cảm; tắt để giữ nguyên dữ liệu.
+- **Limit capture / Giới hạn capture**: bật để giới hạn dung lượng/nội dung và lịch sử; tắt để bỏ các giới hạn capture do SDK/Viewer đặt ra.
+
+Bấm **Apply & restart → Copy SDK setup**, cập nhật cấu hình SDK rồi reload app React Native. Lựa chọn được ghi nhớ; chỉ áp dụng cho capture mới, không khôi phục dữ liệu đã che hoặc cắt. Tắt giới hạn sẽ tăng mức sử dụng bộ nhớ; giới hạn của hệ điều hành/transport vẫn áp dụng.
 
 ## Khi chưa thấy dữ liệu
 
 1. Kiểm tra Viewer đang **Listening**. Nếu đang dừng, bấm **Start server**.
 2. Kiểm tra app đã cài SDK, thêm đoạn khởi tạo và chạy bản development. Sau khi cài SDK lần đầu, cần build lại app native.
-3. Kiểm tra host và cổng. Với Wi-Fi, kiểm tra hai thiết bị cùng mạng; với Android USB, kiểm tra `adb reverse`.
+3. Kiểm tra URL, cổng và pairing token; copy lại SDK setup nếu đã đổi token. Với Wi-Fi, kiểm tra hai thiết bị cùng mạng; với Android USB, kiểm tra `adb reverse`.
 4. Cho phép quyền Local Network trên macOS hoặc kết nối qua firewall trên Windows nếu được hỏi.
 5. Reload app React Native rồi thực hiện lại thao tác gọi API hoặc ghi log.
 6. Chọn **All**, xóa từ khóa tìm kiếm và đưa các bộ lọc về **All**; kiểm tra Viewer không ở trạng thái Pause.
 7. Nếu cổng bị chiếm, đổi cổng trong Settings và cập nhật cấu hình SDK hoặc MCP client tương ứng.
+
+## Bảo mật và chất lượng
+
+Xem [chính sách báo lỗi bảo mật](SECURITY.md), [giới hạn bảo mật và cấu hình WSS](docs/security.md), và [workflow kiểm thử/build](.github/workflows/desktop.yml). Badge hoặc workflow chỉ là bằng chứng khi lần chạy tương ứng đã thành công; dự án chưa có kiểm toán bảo mật độc lập.

@@ -184,10 +184,14 @@ void main() {
       final save = find.byKey(const ValueKey('save-mcp-port'));
       await tester.ensureVisible(save);
       await tester.enterText(port, '0');
+      await tester.ensureVisible(save);
+      await tester.pumpAndSettle();
       await tester.tap(save);
       await tester.pumpAndSettle();
       expect(find.text('Enter a port from 1 to 65535'), findsOneWidget);
       await tester.enterText(port, '39942');
+      await tester.ensureVisible(save);
+      await tester.pumpAndSettle();
       await tester.tap(save);
       await tester.pumpAndSettle();
       expect(mcp.running, isTrue);
@@ -227,10 +231,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('copy-mcp-codex')));
       await tester.pumpAndSettle();
-      expect(
-        copied,
-        '[mcp_servers.rn-network-viewer]\nurl = "http://127.0.0.1:39942/mcp"\n',
-      );
+      expect(copied, mcp.codexConfiguration);
       final copySetup = find.byKey(const ValueKey('copy-mcp-setup'));
       await tester.ensureVisible(copySetup);
       await tester.tap(copySetup);
@@ -254,6 +255,8 @@ void main() {
         contains('Do not claim access until a tool call succeeds'),
       );
       await tester.ensureVisible(toggle);
+      await tester.ensureVisible(toggle);
+      await tester.pumpAndSettle();
       await tester.tap(toggle);
       await tester.pumpAndSettle();
       expect(mcp.running, isFalse);

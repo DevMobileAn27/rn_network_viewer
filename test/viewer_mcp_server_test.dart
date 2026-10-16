@@ -51,7 +51,10 @@ void main() {
         });
         expect(mcp.running, isFalse);
         await viewer.start(port: 0);
-        final socket = await WebSocket.connect(viewer.localUrl);
+        final socket = await WebSocket.connect(
+          viewer.localUrl,
+          headers: viewer.connectionHeaders,
+        );
         addTearDown(socket.close);
         socket.add(jsonEncode(fixture()));
         for (
@@ -69,7 +72,12 @@ void main() {
         await mcp.configure(enabled: true, port: 0);
         expect(mcp.running, isTrue);
         await client.connect(
-          StreamableHttpClientTransport(Uri.parse(mcp.endpoint)),
+          StreamableHttpClientTransport(
+            Uri.parse(mcp.endpoint),
+            opts: StreamableHttpClientTransportOptions(
+              requestInit: {'headers': mcp.authorizationHeaders},
+            ),
+          ),
         );
         final tools = (await client.listTools()).tools;
         expect(
@@ -283,6 +291,7 @@ void main() {
       ]) {
         final request = await http.postUrl(scenario.$2);
         scenario.$1.forEach(request.headers.set);
+        mcp.authorizationHeaders.forEach(request.headers.set);
         request.headers.contentType = ContentType.json;
         request.headers.set('Accept', 'application/json, text/event-stream');
         request.write(
@@ -293,6 +302,7 @@ void main() {
         await response.drain<void>();
       }
       final request = await http.postUrl(url);
+      mcp.authorizationHeaders.forEach(request.headers.set);
       request.headers.contentType = ContentType.json;
       request.headers.set('Accept', 'application/json, text/event-stream');
       request.write(

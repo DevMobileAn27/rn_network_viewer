@@ -5,6 +5,7 @@ import '../services/app_settings.dart';
 import '../services/viewer_server.dart';
 import '../services/viewer_mcp_server.dart';
 import 'components.dart';
+import 'connection_security_panel.dart';
 import 'viewer_dropdown.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -232,6 +233,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ]),
               const SizedBox(height: 20),
               _mcpSection(),
+              const SizedBox(height: 20),
+              _section(Icons.security, context.l10n.security, [
+                ConnectionSecurityPanel(
+                  server: widget.server,
+                  mcp: widget.mcpServer,
+                  preferences: widget.settings.preferences,
+                ),
+              ]),
             ],
           );
         },

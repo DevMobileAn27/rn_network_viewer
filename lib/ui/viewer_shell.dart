@@ -162,7 +162,7 @@ class _ViewerShellState extends State<ViewerShell>
               mainAxisSize: MainAxisSize.min,
               children: [
                 SelectableText(
-                  "import {bootRNNetworkDebuggerWithPort}\n  from '@quocandev27/rn_network_debugger';\n\nif (__DEV__) {\n  bootRNNetworkDebuggerWithPort(${server.port});\n}",
+                  server.setupCode,
                   style: mono.copyWith(color: context.palette.accent),
                 ),
                 SizedBox(height: 20),
@@ -174,7 +174,7 @@ class _ViewerShellState extends State<ViewerShell>
                   (ip) => Padding(
                     padding: EdgeInsets.only(top: 8),
                     child: SelectableText(
-                      'ws://$ip:${server.port}/rnv/network',
+                      '${server.scheme}://$ip:${server.port}/rnv/network',
                       style: mono,
                     ),
                   ),

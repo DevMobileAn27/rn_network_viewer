@@ -7,10 +7,17 @@ import 'package:mcp_dart/mcp_dart.dart';
 import 'capture_store.dart';
 import 'mcp_capture_tools.dart';
 import 'viewer_server.dart';
+import 'connection_security.dart';
 
 class ViewerMcpServer extends ChangeNotifier {
-  ViewerMcpServer(CaptureStore store, ViewerServer viewer)
-    : _tools = McpCaptureTools(store, viewer);
+  ViewerMcpServer(CaptureStore store, ViewerServer viewer, {String? token})
+    : accessToken = token ?? createAccessToken(),
+      _tools = McpCaptureTools(store, viewer);
+
+  String accessToken;
+  Map<String, String> get authorizationHeaders => {
+    'Authorization': 'Bearer $accessToken',
+  };
 
   final McpCaptureTools _tools;
   StreamableMcpServer? _server;
@@ -26,11 +33,11 @@ class ViewerMcpServer extends ChangeNotifier {
   String get endpoint => 'http://127.0.0.1:$port/mcp';
   String get clientConfiguration => const JsonEncoder.withIndent('  ').convert({
     'mcpServers': {
-      'rn-network-viewer': {'url': endpoint},
+      'rn-network-viewer': {'url': endpoint, 'headers': authorizationHeaders},
     },
   });
   String get codexConfiguration =>
-      '[mcp_servers.rn-network-viewer]\nurl = "$endpoint"\n';
+      '[mcp_servers.rn-network-viewer]\nurl = "$endpoint"\nhttp_headers = { Authorization = "Bearer $accessToken" }\n';
 
   String get setupCommand =>
       '''Connect to my local RN Network Viewer MCP server and use it to inspect my React Native app's network requests and console logs.
@@ -38,15 +45,17 @@ class ViewerMcpServer extends ChangeNotifier {
 Server name: rn-network-viewer
 Transport: Streamable HTTP
 Endpoint: $endpoint
-Authentication: none (loopback only)
+Authentication: Bearer token (loopback only). Keep this configuration private.
 
 Set up the MCP connection using the configuration supported by your client:
 
 Claude Code:
-claude mcp add --transport http --scope user rn-network-viewer $endpoint
+claude mcp add --transport http --scope user rn-network-viewer $endpoint --header "Authorization: Bearer $accessToken"
 
 Codex CLI:
-codex mcp add rn-network-viewer --url $endpoint
+export RN_NETWORK_VIEWER_MCP_TOKEN='$accessToken'
+codex mcp add rn-network-viewer --url $endpoint --bearer-token-env-var RN_NETWORK_VIEWER_MCP_TOKEN
+Keep this environment variable available whenever launching Codex; the export above applies only to the current shell.
 
 Clients supporting HTTP MCP JSON configuration:
 $clientConfiguration
@@ -56,7 +65,7 @@ ${const JsonEncoder.withIndent('  ').convert({
         'mcpServers': {
           'rn-network-viewer': {
             'command': 'npx',
-            'args': ['-y', 'mcp-remote', endpoint],
+            'args': ['-y', 'mcp-remote', endpoint, '--header', 'Authorization: Bearer $accessToken'],
           },
         },
       })}
@@ -91,11 +100,22 @@ After connecting, discover the tools and call list_sessions and get_capture_summ
         if (_disposed || revision != _revision) return;
         this.port = port;
         if (!enabled) return;
+        if (!validAccessToken(accessToken)) {
+          throw StateError('Invalid MCP token');
+        }
         final server = StreamableMcpServer(
           serverFactory: (_) => _tools.createServer(),
           host: '127.0.0.1',
           port: port,
           path: '/mcp',
+          authenticationHandler: (request) =>
+              request.headers.value('origin') == null &&
+                  matchesBearer(
+                    request.headers.value('authorization'),
+                    accessToken,
+                  )
+              ? const StreamableMcpAuthenticationResult.allow()
+              : const StreamableMcpAuthenticationResult.unauthorized(),
           enableJsonResponse: true,
           allowedHosts: const {'127.0.0.1', 'localhost'},
           allowedOrigins: const {},

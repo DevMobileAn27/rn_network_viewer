@@ -7,7 +7,20 @@ import '../models/capture.dart';
 
 /// Bounded live capture. IDs are scoped to the SDK session, never to a socket.
 class CaptureStore extends ChangeNotifier {
-  CaptureStore({this.maxRecords = 5000, this.maxBytes = 64 * 1024 * 1024});
+  CaptureStore({
+    this.maxRecords = 5000,
+    this.maxBytes = 64 * 1024 * 1024,
+    bool limitCapture = true,
+  }) : _limitCapture = limitCapture;
+  bool _limitCapture;
+  bool get limitCapture => _limitCapture;
+  set limitCapture(bool value) {
+    if (_limitCapture == value) return;
+    _limitCapture = value;
+    _trim();
+    notifyListeners();
+  }
+
   final int maxRecords;
   final int maxBytes;
   final sessions = <String, DeviceSession>{};
@@ -44,7 +57,7 @@ class CaptureStore extends ChangeNotifier {
     final id = metadata['id'] as String;
     sessions[id] = DeviceSession(metadata, sdk);
     // Retain only a bounded session history; active data stays attributable.
-    while (sessions.length > 100) {
+    while (_limitCapture && sessions.length > 100) {
       final unused = sessions.keys
           .where(
             (key) =>
@@ -97,7 +110,8 @@ class CaptureStore extends ChangeNotifier {
   }
 
   void _trim() {
-    while (_retention.isNotEmpty &&
+    while (_limitCapture &&
+        _retention.isNotEmpty &&
         (_retention.length > maxRecords || _bytes > maxBytes)) {
       final oldest = _retention.removeFirst();
       if (oldest.log) {

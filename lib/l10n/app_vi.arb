@@ -22,7 +22,7 @@
   "aborted": "Đã hủy",
   "guideTitle": "Kết nối ứng dụng React Native",
   "availableEndpoints": "Endpoint",
-  "physicalDeviceGuide": "Thiết bị thật: VIEWER_HOST = IP LAN máy tính (cùng mạng).",
+  "physicalDeviceGuide": "Điện thoại: bật LAN trong Cài đặt → Bảo mật, chọn IP/subnet rồi sao chép cấu hình SDK.",
   "copyEndpoint": "Sao chép địa chỉ nội bộ",
   "gotIt": "Đóng",
   "pausedBanner": "Đã tạm dừng · Bỏ qua dữ liệu mới",
@@ -206,8 +206,31 @@
   "formatJson": "Format",
   "invalidJson": "JSON không hợp lệ",
   "jsonErrorAt": "Dòng {line}, cột {column}",
-  "@jsonErrorAt": {"placeholders": {"line": {"type": "int"}, "column": {"type": "int"}}},
+  "@jsonErrorAt": {
+    "placeholders": {
+      "line": {
+        "type": "int"
+      },
+      "column": {
+        "type": "int"
+      }
+    }
+  },
   "copyFormattedJson": "Sao chép JSON đã định dạng",
   "collapseJsonRange": "Bấm để thu gọn vùng này",
-  "expandJsonRange": "Bấm để mở rộng vùng này"
+  "expandJsonRange": "Bấm để mở rộng vùng này",
+  "security": "Bảo mật",
+  "allowLan": "Cho phép kết nối LAN",
+  "connectionSecurityHint": "Mặc định: localhost. LAN cần subnet IPv4 riêng và token. Dùng USB hoặc WSS trên mạng không tin cậy.",
+  "lanAddress": "Địa chỉ LAN",
+  "lanSubnet": "Subnet được phép (CIDR)",
+  "lanSubnetInvalid": "Chọn IP LAN thuộc subnet được phép.",
+  "applyConnection": "Áp dụng & khởi động lại",
+  "copySdkSetup": "Sao chép setup SDK",
+  "rotatePairingToken": "Đổi token ghép đôi",
+  "rotateMcpToken": "Đổi token MCP",
+  "tokenRotationHint": "Đổi token sẽ ngắt client cũ. Sao chép lại setup sau khi đổi. Không lưu token vào Git. Android USB dùng adb reverse và host 127.0.0.1.",
+  "redactSensitiveData": "Che dữ liệu nhạy cảm",
+  "limitCapture": "Giới hạn capture",
+  "captureOptionsHint": "Áp dụng & khởi động lại, rồi copy cấu hình SDK và reload app React Native. Áp dụng cho dữ liệu mới."
 }

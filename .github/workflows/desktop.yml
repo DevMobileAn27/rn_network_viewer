@@ -5,6 +5,9 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   desktop:
     strategy:
@@ -32,9 +35,18 @@ jobs:
         run: flutter build windows --release
       - if: matrix.target == 'macos'
         run: ditto -c -k --sequesterRsrc --keepParent "build/macos/Build/Products/Release/RN Network Viewer.app" build/rn-network-viewer-macos.zip
+      - if: matrix.target == 'macos'
+        run: shasum -a 256 build/rn-network-viewer-macos.zip > build/SHA256SUMS.txt
+      - if: matrix.target == 'windows'
+        shell: pwsh
+        run: |
+          Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath build/rn-network-viewer-windows.zip
+          $hash = (Get-FileHash build/rn-network-viewer-windows.zip -Algorithm SHA256).Hash.ToLower()
+          "$hash  rn-network-viewer-windows.zip" | Set-Content build/SHA256SUMS.txt
       - uses: actions/upload-artifact@v4
         with:
           name: rn-network-viewer-${{ matrix.target }}
           path: |
             build/rn-network-viewer-macos.zip
-            build/windows/x64/runner/Release/
+            build/rn-network-viewer-windows.zip
+            build/SHA256SUMS.txt
