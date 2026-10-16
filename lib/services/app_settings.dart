@@ -10,18 +10,111 @@ class AppSettings extends ChangeNotifier {
           ? ThemeMode.dark
           : ThemeMode.light,
       _mcpEnabled = preferences?.getBool('mcpEnabled') ?? false,
-      _mcpPort = _restoreMcpPort(preferences?.getInt('mcpPort'));
+      _mcpPort = _restoreMcpPort(preferences?.getInt('mcpPort')),
+      _networkInspectorWidth = _restoreWidth(
+        preferences?.getDouble('networkInspectorWidth'),
+      ),
+      _consoleInspectorWidth = _restoreWidth(
+        preferences?.getDouble('consoleInspectorWidth'),
+      ),
+      _jsonInputFraction = _restoreFraction(
+        preferences?.getDouble('jsonInputFraction'),
+      ),
+      _requestDetailTab = _restoreTab(preferences);
 
   final SharedPreferences? preferences;
   String _languageCode;
   ThemeMode _themeMode;
   bool _mcpEnabled;
   int _mcpPort;
+  double _networkInspectorWidth;
+  double _consoleInspectorWidth;
+  double _jsonInputFraction;
+  int _requestDetailTab;
   ThemeMode get themeMode => _themeMode;
   String get languageCode => _languageCode;
   Locale get locale => Locale(_languageCode);
   bool get mcpEnabled => _mcpEnabled;
   int get mcpPort => _mcpPort;
+  double get networkInspectorWidth => _networkInspectorWidth;
+  double get consoleInspectorWidth => _consoleInspectorWidth;
+  double get jsonInputFraction => _jsonInputFraction;
+  int get requestDetailTab => _requestDetailTab;
+
+  static double _restoreWidth(double? value) =>
+      value != null && value.isFinite && value >= 320 ? value : 400;
+  static double _restoreFraction(double? value) =>
+      value != null && value.isFinite && value > 0 && value < 1 ? value : .5;
+  static const _detailTabs = [
+    'overview',
+    'requestHeader',
+    'requestBody',
+    'responseHeader',
+    'responseBody',
+    'raw',
+  ];
+
+  static int _restoreTab(SharedPreferences? preferences) {
+    final name = preferences?.getString('requestDetailTabName');
+    if (name != null) {
+      final index = _detailTabs.indexOf(name);
+      return index < 0 ? 0 : index;
+    }
+    // Retain the meaning of the former four tabs when upgrading.
+    return switch (preferences?.getInt('requestDetailTab')) {
+      1 => 2, // Request -> Request body
+      2 => 4, // Response -> Response body
+      3 => 5, // Raw
+      _ => 0,
+    };
+  }
+
+  // Layout widgets update locally. Keep these values current synchronously so
+  // another request or pane can restore them even while the disk write awaits.
+  // No global notification is needed for these local presentation preferences.
+  Future<void> setInspectorWidth(double width, {required bool console}) async {
+    if (!width.isFinite || width < 320) {
+      throw ArgumentError.value(width, 'width');
+    }
+    if (console) {
+      if (_consoleInspectorWidth == width) return;
+      _consoleInspectorWidth = width;
+    } else {
+      if (_networkInspectorWidth == width) return;
+      _networkInspectorWidth = width;
+    }
+    final key = console ? 'consoleInspectorWidth' : 'networkInspectorWidth';
+    if (preferences != null && !await preferences!.setDouble(key, width)) {
+      throw StateError('Could not persist inspector width');
+    }
+  }
+
+  Future<void> setJsonInputFraction(double fraction) async {
+    if (!fraction.isFinite || fraction <= 0 || fraction >= 1) {
+      throw ArgumentError.value(fraction, 'fraction');
+    }
+    if (_jsonInputFraction == fraction) return;
+    _jsonInputFraction = fraction;
+    if (preferences != null &&
+        !await preferences!.setDouble('jsonInputFraction', fraction)) {
+      throw StateError('Could not persist JSON divider');
+    }
+  }
+
+  Future<void> setRequestDetailTab(int index) async {
+    if (index < 0 || index >= _detailTabs.length) {
+      throw ArgumentError.value(index, 'index');
+    }
+    if (_requestDetailTab == index) return;
+    _requestDetailTab = index;
+    if (preferences != null &&
+        !await preferences!.setString(
+          'requestDetailTabName',
+          _detailTabs[index],
+        )) {
+      throw StateError('Could not persist request detail tab');
+    }
+  }
 
   static int _restoreMcpPort(int? value) =>
       value != null && value >= 1 && value <= 65535 ? value : 38941;

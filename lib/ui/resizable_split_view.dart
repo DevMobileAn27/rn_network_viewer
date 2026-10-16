@@ -8,10 +8,14 @@ class ResizableSplitView extends StatefulWidget {
     super.key,
     required this.list,
     required this.inspector,
+    this.initialWidth = 400,
+    this.onWidthChanged,
   });
 
   final Widget list;
   final Widget inspector;
+  final double initialWidth;
+  final ValueChanged<double>? onWidthChanged;
 
   @override
   State<ResizableSplitView> createState() => _ResizableSplitViewState();
@@ -22,7 +26,7 @@ class _ResizableSplitViewState extends State<ResizableSplitView> {
   static const _minInspectorWidth = 320.0;
   static const _minListWidth = 360.0;
   static const _dividerWidth = 8.0;
-  double _width = _defaultWidth;
+  late double _width = widget.initialWidth;
   bool _hovered = false;
   bool _dragging = false;
 
@@ -34,6 +38,16 @@ class _ResizableSplitViewState extends State<ResizableSplitView> {
       void resize(double nextWidth) => setState(
         () => _width = nextWidth.clamp(_minInspectorWidth, maxWidth).toDouble(),
       );
+      void commit() => widget.onWidthChanged?.call(_width);
+      void resizeAndCommit(double nextWidth) {
+        resize(nextWidth);
+        commit();
+      }
+
+      void endDrag() {
+        setState(() => _dragging = false);
+        commit();
+      }
 
       return Row(
         children: [
@@ -43,8 +57,8 @@ class _ResizableSplitViewState extends State<ResizableSplitView> {
           ),
           Semantics(
             label: context.l10n.resizeInspector,
-            onIncrease: () => resize(width + 32),
-            onDecrease: () => resize(width - 32),
+            onIncrease: () => resizeAndCommit(width + 32),
+            onDecrease: () => resizeAndCommit(width - 32),
             child: MouseRegion(
               cursor: SystemMouseCursors.resizeColumn,
               onEnter: (_) => setState(() => _hovered = true),
@@ -58,9 +72,9 @@ class _ResizableSplitViewState extends State<ResizableSplitView> {
                 }),
                 onHorizontalDragUpdate: (details) =>
                     resize(_width - details.delta.dx),
-                onHorizontalDragEnd: (_) => setState(() => _dragging = false),
-                onHorizontalDragCancel: () => setState(() => _dragging = false),
-                onDoubleTap: () => resize(_defaultWidth),
+                onHorizontalDragEnd: (_) => endDrag(),
+                onHorizontalDragCancel: endDrag,
+                onDoubleTap: () => resizeAndCommit(_defaultWidth),
                 child: SizedBox(
                   width: _dividerWidth,
                   height: double.infinity,

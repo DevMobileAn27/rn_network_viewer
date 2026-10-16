@@ -81,6 +81,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(paneWidth(left), closeTo(paneWidth(right), .01));
 
+    await tester.ensureVisible(find.text('Tree'));
     await tester.tap(find.text('Tree'));
     await tester.pumpAndSettle();
     await tester.tap(find.textContaining('meta: {}'));
@@ -94,6 +95,103 @@ void main() {
     server.dispose();
     store.dispose();
   });
+
+  for (final width in [860.0, 1360.0]) {
+    testWidgets(
+      'beautify Find retains 2 of 3 across views, tabs and resize at $width',
+      (tester) async {
+        tester.view.physicalSize = Size(width, 800);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        final store = CaptureStore();
+        final server = ViewerServer(store);
+        await tester.pumpWidget(ViewerApp(store: store, server: server));
+        await tester.tap(find.text('Json beautify'));
+        await tester.pumpAndSettle();
+        final source = find.byKey(const ValueKey('json-beautify-input'));
+        final search = find.byKey(const ValueKey('json-find-input'));
+        final counter = find.byKey(const ValueKey('json-find-count'));
+        expect(search, findsNothing);
+        await tester.enterText(
+          source,
+          '{"items":[{"name":"needle"},{"name":"needle"},{"name":"needle"}]}',
+        );
+        await tester.tap(find.byKey(const ValueKey('format-json')));
+        await tester.pumpAndSettle();
+        expect(search, findsOneWidget);
+        expect(
+          tester.getSize(find.byKey(const ValueKey('json-find-bar'))).width,
+          340,
+        );
+        expect(tester.widget<Text>(counter).data, 'No results');
+        await tester.enterText(search, 'needle');
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(
+          find.byKey(const ValueKey('json-find-next')),
+        );
+        await tester.tap(find.byKey(const ValueKey('json-find-next')));
+        await tester.pumpAndSettle();
+        expect(tester.widget<Text>(counter).data, '2 of 3');
+        final code = tester.widget<JsonCodeView>(find.byType(JsonCodeView));
+        expect(code.find!.active!.path, ['items', 1, 'name']);
+        await tester.ensureVisible(find.text('Tree'));
+        await tester.tap(find.text('Tree'));
+        await tester.pumpAndSettle();
+        expect(
+          tester
+              .widget<JsonTreeView>(find.byType(JsonTreeView))
+              .find!
+              .active!
+              .path,
+          ['items', 1, 'name'],
+        );
+        expect(find.textContaining('name: "needle"'), findsOneWidget);
+        expect(tester.widget<Text>(counter).data, '2 of 3');
+        await tester.drag(
+          find.byKey(const ValueKey('json-beautify-divider')),
+          const Offset(100, 0),
+        );
+        await tester.pumpAndSettle();
+        expect(
+          tester.getSize(find.byKey(const ValueKey('json-find-bar'))).width,
+          340,
+        );
+        await tester.tap(find.text('Console'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Json beautify'));
+        await tester.pumpAndSettle();
+        expect(tester.widget<TextField>(search).controller!.text, 'needle');
+        expect(tester.widget<Text>(counter).data, '2 of 3');
+        await tester.enterText(source, '{"updated":"needle"}');
+        await tester.tap(find.byKey(const ValueKey('format-json')));
+        await tester.pumpAndSettle();
+        expect(tester.widget<Text>(counter).data, '1 of 1');
+        expect(find.textContaining('updated: "needle"'), findsOneWidget);
+        await tester.enterText(source, '{invalid');
+        await tester.tap(find.byKey(const ValueKey('format-json')));
+        await tester.pumpAndSettle();
+        expect(find.text('Invalid JSON'), findsOneWidget);
+        await tester.tap(find.text('Close'));
+        await tester.pumpAndSettle();
+        expect(tester.widget<Text>(counter).data, '1 of 1');
+        await tester.enterText(source, 'null');
+        await tester.tap(find.byKey(const ValueKey('format-json')));
+        await tester.pumpAndSettle();
+        expect(tester.widget<Text>(counter).data, 'No results');
+        // The same shortcut focuses Find even while the JSON input has focus.
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+        await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+        await tester.pumpAndSettle();
+        expect(tester.widget<TextField>(search).focusNode!.hasFocus, isTrue);
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox());
+        server.dispose();
+        store.dispose();
+      },
+    );
+  }
 
   for (final width in [860.0, 1360.0]) {
     testWidgets(
@@ -118,6 +216,7 @@ void main() {
           document(tester),
           const JsonEncoder.withIndent('  ').convert(jsonDecode(source)),
         );
+        await tester.ensureVisible(find.text('Tree'));
         await tester.tap(find.text('Tree'));
         await tester.pumpAndSettle();
         expect(find.byType(JsonTreeView), findsOneWidget);
@@ -151,6 +250,7 @@ void main() {
           tester.widget<JsonTreeView>(find.byType(JsonTreeView)).value,
           isNull,
         );
+        await tester.ensureVisible(find.text('JSON'));
         await tester.tap(find.text('JSON'));
         await tester.pumpAndSettle();
         expect(document(tester), 'null');
@@ -171,6 +271,7 @@ void main() {
             null,
           ),
         );
+        await tester.ensureVisible(find.byTooltip('Copy formatted JSON'));
         await tester.tap(find.byTooltip('Copy formatted JSON'));
         await tester.pumpAndSettle();
         expect(copied, 'null');

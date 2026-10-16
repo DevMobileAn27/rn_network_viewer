@@ -9,8 +9,24 @@ import 'package:rn_network_viewer/services/capture_store.dart';
 import 'package:rn_network_viewer/services/viewer_server.dart';
 import 'package:rn_network_viewer/ui/viewer_dropdown.dart';
 import 'package:rn_network_viewer/ui/json_code_view.dart';
+import 'package:rn_network_viewer/ui/viewer_theme.dart';
 
 void main() {
+  test('RN primary stays green in both themes and selection is legible', () {
+    for (final dark in [false, true]) {
+      final palette = ViewerPalette(dark);
+      final theme = viewerTheme(dark ? Brightness.dark : Brightness.light);
+      expect(palette.primaryFill, const Color(0xff08785d));
+      expect(
+        theme.colorScheme.primary,
+        dark ? const Color(0xff63ddbb) : const Color(0xff08785d),
+      );
+      final contrast =
+          (palette.onSelectedRow.computeLuminance() + .05) /
+          (palette.selectedRow.computeLuminance() + .05);
+      expect(contrast, greaterThanOrEqualTo(4.5));
+    }
+  });
   testWidgets(
     'filter menu selects a method and dismisses with Escape or outside tap',
     (tester) async {
@@ -88,7 +104,10 @@ void main() {
     });
     await tester.pumpAndSettle();
     expect(
-      find.descendant(of: find.byType(Dialog), matching: find.text('201')),
+      find.descendant(
+        of: find.byType(Dialog),
+        matching: find.textContaining('201'),
+      ),
       findsOneWidget,
     );
     expect(tester.takeException(), isNull);
@@ -115,8 +134,28 @@ void main() {
       expect(find.text('Example Shop'), findsOneWidget);
       await tester.tap(find.text('/orders?draft=true'));
       await tester.pumpAndSettle();
-      expect(find.text('Request inspector'), findsOneWidget);
-      await tester.tap(find.text('Response'));
+      expect(
+        find.text('https://api.example.com/orders?draft=true'),
+        findsOneWidget,
+      );
+      final selectedPath = tester.widget<Text>(find.text('/orders?draft=true'));
+      expect(selectedPath.style?.color, Colors.white);
+      expect(selectedPath.style?.fontWeight, FontWeight.w600);
+      for (final tab in [
+        'Request header',
+        'Request body',
+        'Response header',
+        'Response body',
+      ]) {
+        await tester.ensureVisible(find.text(tab));
+        await tester.tap(find.text(tab));
+        await tester.pumpAndSettle();
+        final body = tab.endsWith('body');
+        expect(find.text('HEADERS'), body ? findsNothing : findsOneWidget);
+        expect(find.text('BODY'), body ? findsOneWidget : findsNothing);
+      }
+      await tester.ensureVisible(find.text('Response body'));
+      await tester.tap(find.text('Response body'));
       await tester.pumpAndSettle();
       expect(find.textContaining('"id": 42'), findsOneWidget);
       final pane = find.byKey(const ValueKey('inspector-pane'));

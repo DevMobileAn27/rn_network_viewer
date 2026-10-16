@@ -5,8 +5,9 @@ import '../l10n/strings.dart';
 import '../services/connection_security.dart';
 import '../services/viewer_server.dart';
 import '../services/viewer_mcp_server.dart';
-import 'components.dart';
+import 'settings_feedback.dart';
 import 'viewer_dropdown.dart';
+import 'viewer_theme.dart';
 
 class ConnectionSecurityPanel extends StatefulWidget {
   const ConnectionSecurityPanel({
@@ -32,6 +33,22 @@ class _ConnectionSecurityPanelState extends State<ConnectionSecurityPanel> {
   List<String> _addresses = [];
   bool _busy = false;
   String? _error;
+
+  bool get _pendingChanges =>
+      _lan != widget.server.lanEnabled ||
+      _redact != widget.server.redactSensitiveData ||
+      _limit != widget.server.limitCapture ||
+      (_lan &&
+          (_address != widget.server.bindAddress ||
+              _cidr.text.trim() != widget.server.lanCidr));
+
+  void _pendingNotice() => showSettingsFeedback(
+    context,
+    _pendingChanges
+        ? context.l10n.settingsPendingApply
+        : context.l10n.settingsNoPendingChanges,
+    kind: SettingsFeedbackKind.info,
+  );
   @override
   void initState() {
     super.initState();
@@ -66,10 +83,15 @@ class _ConnectionSecurityPanelState extends State<ConnectionSecurityPanel> {
       _error = null;
     });
     try {
-      if (_lan &&
-          (_address.isEmpty ||
-              !LanSubnet(_cidr.text).contains(InternetAddress(_address)))) {
-        throw FormatException(context.l10n.lanSubnetInvalid);
+      if (_lan) {
+        try {
+          if (_address.isEmpty ||
+              !LanSubnet(_cidr.text).contains(InternetAddress(_address))) {
+            throw const FormatException();
+          }
+        } on FormatException {
+          throw FormatException(context.l10n.lanSubnetInvalid);
+        }
       }
       final prefs = widget.preferences;
       if (prefs != null) {
@@ -88,13 +110,35 @@ class _ConnectionSecurityPanelState extends State<ConnectionSecurityPanel> {
       widget.server.bindAddress = _lan ? _address : '127.0.0.1';
       widget.server.lanCidr = _cidr.text.trim();
       await widget.server.start(port: widget.server.port);
-      if (mounted) setState(() => _error = widget.server.error);
+      if (mounted) {
+        final error = widget.server.error;
+        if (error != null || !widget.server.running) {
+          final message = error == null
+              ? context.l10n.settingsSaveFailed
+              : context.l10n.serverStartFailed(error);
+          setState(() => _error = message);
+          showSettingsFeedback(
+            context,
+            message,
+            kind: SettingsFeedbackKind.error,
+          );
+        } else {
+          showSettingsFeedback(context, context.l10n.securityApplied);
+        }
+      }
     } catch (e) {
       if (mounted) {
         setState(
           () => _error = e is FormatException
               ? e.message
               : context.l10n.settingsSaveFailed,
+        );
+        showSettingsFeedback(
+          context,
+          _error!,
+          kind: e is FormatException
+              ? SettingsFeedbackKind.warning
+              : SettingsFeedbackKind.error,
         );
       }
     } finally {
@@ -109,6 +153,8 @@ class _ConnectionSecurityPanelState extends State<ConnectionSecurityPanel> {
     });
     try {
       final token = createAccessToken();
+      var restartFailed = false;
+      String? restartError;
       if (widget.preferences != null &&
           !await widget.preferences!.setString(
             mcp ? 'mcpToken' : 'captureToken',
@@ -124,14 +170,48 @@ class _ConnectionSecurityPanelState extends State<ConnectionSecurityPanel> {
           port: widget.mcp.port,
           restart: true,
         );
+        restartFailed =
+            widget.mcp.error != null ||
+            ((widget.preferences?.getBool('mcpEnabled') ?? false) &&
+                !widget.mcp.running);
+        restartError = widget.mcp.error;
       } else {
         final running = widget.server.running;
         await widget.server.stop();
         widget.server.accessToken = token;
-        if (running) await widget.server.start(port: widget.server.port);
+        if (running) {
+          await widget.server.start(port: widget.server.port);
+          restartFailed = !widget.server.running || widget.server.error != null;
+          restartError = widget.server.error;
+        }
+      }
+      if (mounted) {
+        if (restartFailed) {
+          final message = context.l10n.tokenResetRestartFailed(
+            restartError ?? context.l10n.settingsSaveFailed,
+          );
+          setState(() => _error = message);
+          showSettingsFeedback(
+            context,
+            message,
+            kind: SettingsFeedbackKind.warning,
+          );
+        } else {
+          showSettingsFeedback(
+            context,
+            mcp ? context.l10n.mcpTokenReset : context.l10n.pairingTokenReset,
+          );
+        }
       }
     } catch (_) {
-      if (mounted) setState(() => _error = context.l10n.settingsSaveFailed);
+      if (mounted) {
+        setState(() => _error = context.l10n.settingsSaveFailed);
+        showSettingsFeedback(
+          context,
+          _error!,
+          kind: SettingsFeedbackKind.error,
+        );
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -148,14 +228,28 @@ class _ConnectionSecurityPanelState extends State<ConnectionSecurityPanel> {
     listenable: Listenable.merge([widget.server, widget.mcp]),
     builder: (context, _) {
       final busy = _busy || widget.server.busy || widget.mcp.busy;
+      final buttonShape = RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+      );
+      final outlinedButtonStyle = OutlinedButton.styleFrom(
+        minimumSize: const Size(0, 44),
+        visualDensity: VisualDensity.standard,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        shape: buttonShape,
+      );
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SwitchListTile.adaptive(
+          SwitchListTile(
             contentPadding: EdgeInsets.zero,
             title: Text(context.l10n.allowLan),
             value: _lan,
-            onChanged: busy ? null : (v) => setState(() => _lan = v),
+            onChanged: busy
+                ? null
+                : (v) {
+                    setState(() => _lan = v);
+                    _pendingNotice();
+                  },
           ),
           Text(context.l10n.connectionSecurityHint),
           if (_lan) ...[
@@ -169,7 +263,10 @@ class _ConnectionSecurityPanelState extends State<ConnectionSecurityPanel> {
                   : _addresses.map((a) => DropdownOption(a, a)).toList(),
               onChanged: busy || _addresses.isEmpty
                   ? null
-                  : (v) => setState(() => _address = v),
+                  : (v) {
+                      setState(() => _address = v);
+                      _pendingNotice();
+                    },
             ),
             const SizedBox(height: 16),
             Text(context.l10n.lanSubnet),
@@ -182,19 +279,29 @@ class _ConnectionSecurityPanelState extends State<ConnectionSecurityPanel> {
             ),
           ],
           const SizedBox(height: 12),
-          SwitchListTile.adaptive(
+          SwitchListTile(
             key: const ValueKey('redact-sensitive-data'),
             contentPadding: EdgeInsets.zero,
             title: Text(context.l10n.redactSensitiveData),
             value: _redact,
-            onChanged: busy ? null : (value) => setState(() => _redact = value),
+            onChanged: busy
+                ? null
+                : (value) {
+                    setState(() => _redact = value);
+                    _pendingNotice();
+                  },
           ),
-          SwitchListTile.adaptive(
+          SwitchListTile(
             key: const ValueKey('limit-capture'),
             contentPadding: EdgeInsets.zero,
             title: Text(context.l10n.limitCapture),
             value: _limit,
-            onChanged: busy ? null : (value) => setState(() => _limit = value),
+            onChanged: busy
+                ? null
+                : (value) {
+                    setState(() => _limit = value);
+                    _pendingNotice();
+                  },
           ),
           Text(context.l10n.captureOptionsHint),
           if (_error != null)
@@ -210,24 +317,48 @@ class _ConnectionSecurityPanelState extends State<ConnectionSecurityPanel> {
             spacing: 12,
             runSpacing: 12,
             children: [
-              FilledButton(
+              FilledButton.icon(
                 onPressed: busy ? null : _apply,
-                child: Text(context.l10n.applyConnection),
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size(0, 44),
+                  visualDensity: VisualDensity.standard,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  backgroundColor: context.palette.primaryFill,
+                  foregroundColor: Colors.white,
+                  overlayColor: Colors.white,
+                  shape: buttonShape,
+                ),
+                icon: const Icon(Icons.save_outlined, size: 18),
+                label: Text(context.l10n.applyConnection),
               ),
               OutlinedButton.icon(
                 onPressed: busy
                     ? null
-                    : () => copyText(context, widget.server.setupCode),
-                icon: const Icon(Icons.copy, size: 18),
+                    : () => copySettingsText(
+                        context,
+                        widget.server.setupCode,
+                        message: _pendingChanges
+                            ? context.l10n.sdkSetupCopiedPending
+                            : context.l10n.sdkSetupCopied,
+                        kind: _pendingChanges
+                            ? SettingsFeedbackKind.warning
+                            : SettingsFeedbackKind.success,
+                      ),
+                style: outlinedButtonStyle,
+                icon: const Icon(Icons.copy_outlined, size: 18),
                 label: Text(context.l10n.copySdkSetup),
               ),
-              OutlinedButton(
+              OutlinedButton.icon(
                 onPressed: busy ? null : () => _rotate(false),
-                child: Text(context.l10n.rotatePairingToken),
+                style: outlinedButtonStyle,
+                icon: const Icon(Icons.restart_alt, size: 18),
+                label: Text(context.l10n.rotatePairingToken),
               ),
-              OutlinedButton(
+              OutlinedButton.icon(
                 onPressed: busy ? null : () => _rotate(true),
-                child: Text(context.l10n.rotateMcpToken),
+                style: outlinedButtonStyle,
+                icon: const Icon(Icons.restart_alt, size: 18),
+                label: Text(context.l10n.rotateMcpToken),
               ),
             ],
           ),

@@ -8,9 +8,18 @@ import '../l10n/strings.dart';
 import 'components.dart';
 import 'json_code_view.dart';
 import 'json_tree_view.dart';
+import 'json_find_bar.dart';
+import 'json_find_controller.dart';
 
 class JsonBeautifyScreen extends StatefulWidget {
-  const JsonBeautifyScreen({super.key});
+  const JsonBeautifyScreen({
+    super.key,
+    this.initialInputFraction = .5,
+    this.onInputFractionChanged,
+  });
+
+  final double initialInputFraction;
+  final ValueChanged<double>? onInputFractionChanged;
 
   @override
   State<JsonBeautifyScreen> createState() => _JsonBeautifyScreenState();
@@ -19,11 +28,13 @@ class JsonBeautifyScreen extends StatefulWidget {
 class _JsonBeautifyScreenState extends State<JsonBeautifyScreen> {
   final _input = TextEditingController();
   final _outputScroll = ScrollController();
+  final _find = JsonFindController();
+  final _findFocus = FocusNode();
   dynamic _result;
   bool _hasResult = false;
   bool _tree = false;
   int _revision = 0;
-  double _inputFraction = .5;
+  late double _inputFraction = widget.initialInputFraction;
   bool _dividerHovered = false;
   bool _dividerDragging = false;
 
@@ -31,12 +42,15 @@ class _JsonBeautifyScreenState extends State<JsonBeautifyScreen> {
   void dispose() {
     _input.dispose();
     _outputScroll.dispose();
+    _find.dispose();
+    _findFocus.dispose();
     super.dispose();
   }
 
   void _format() {
     try {
       final result = jsonDecode(_input.text);
+      _find.setValue(result);
       setState(() {
         _result = result;
         _hasResult = true;
@@ -87,6 +101,11 @@ class _JsonBeautifyScreenState extends State<JsonBeautifyScreen> {
     bindings: {
       const SingleActivator(LogicalKeyboardKey.enter, control: true): _format,
       const SingleActivator(LogicalKeyboardKey.enter, meta: true): _format,
+      const SingleActivator(LogicalKeyboardKey.keyF, meta: true): _focusFind,
+      const SingleActivator(LogicalKeyboardKey.keyF, control: true): _focusFind,
+      const SingleActivator(LogicalKeyboardKey.f3): () => _find.move(1),
+      const SingleActivator(LogicalKeyboardKey.f3, shift: true): () =>
+          _find.move(-1),
     },
     child: Padding(
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
@@ -165,27 +184,7 @@ class _JsonBeautifyScreenState extends State<JsonBeautifyScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    SizedBox(
-                      height: 44,
-                      child: Row(
-                        children: [
-                          _viewTabs(),
-                          const Spacer(),
-                          IconButton(
-                            tooltip: context.l10n.copyFormattedJson,
-                            onPressed: _hasResult
-                                ? () => copyText(
-                                    context,
-                                    const JsonEncoder.withIndent(
-                                      '  ',
-                                    ).convert(_result),
-                                  )
-                                : null,
-                            icon: const Icon(Icons.copy_outlined, size: 17),
-                          ),
-                        ],
-                      ),
-                    ),
+                    SizedBox(height: 44, child: _outputToolbar()),
                     const SizedBox(height: 8),
                     Expanded(
                       child: !_hasResult
@@ -217,8 +216,12 @@ class _JsonBeautifyScreenState extends State<JsonBeautifyScreen> {
                                         ? JsonTreeView(
                                             key: ValueKey(_revision),
                                             value: _result,
+                                            find: _find,
                                           )
-                                        : JsonCodeView(value: _result),
+                                        : JsonCodeView(
+                                            value: _result,
+                                            find: _find,
+                                          ),
                                   ),
                                 ),
                               ),
@@ -234,6 +237,48 @@ class _JsonBeautifyScreenState extends State<JsonBeautifyScreen> {
     ),
   );
 
+  void _focusFind() {
+    if (_hasResult) _findFocus.requestFocus();
+  }
+
+  Widget _outputToolbar() => LayoutBuilder(
+    builder: (context, constraints) => SingleChildScrollView(
+      key: const ValueKey('json-beautify-toolbar'),
+      scrollDirection: Axis.horizontal,
+      child: SizedBox(
+        width: _hasResult
+            ? math.max(548.0, constraints.maxWidth)
+            : constraints.maxWidth,
+        child: Row(
+          children: [
+            if (_hasResult) ...[
+              Expanded(
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: JsonFindBar(controller: _find, focusNode: _findFocus),
+                ),
+              ),
+              const SizedBox(width: 8),
+            ],
+            _viewTabs(),
+            if (!_hasResult) const Spacer(),
+            const SizedBox(width: 4),
+            IconButton(
+              tooltip: context.l10n.copyFormattedJson,
+              onPressed: _hasResult
+                  ? () => copyText(
+                      context,
+                      const JsonEncoder.withIndent('  ').convert(_result),
+                    )
+                  : null,
+              icon: const Icon(Icons.copy_outlined, size: 17),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+
   Widget _divider(
     double inputWidth,
     double availableWidth,
@@ -242,8 +287,14 @@ class _JsonBeautifyScreenState extends State<JsonBeautifyScreen> {
     container: true,
     explicitChildNodes: true,
     label: context.l10n.resizeJsonPanels,
-    onIncrease: () => resize(inputWidth + 32),
-    onDecrease: () => resize(inputWidth - 32),
+    onIncrease: () {
+      resize(inputWidth + 32);
+      _commitDivider();
+    },
+    onDecrease: () {
+      resize(inputWidth - 32);
+      _commitDivider();
+    },
     child: MouseRegion(
       cursor: SystemMouseCursors.resizeColumn,
       onEnter: (_) => setState(() => _dividerHovered = true),
@@ -257,9 +308,12 @@ class _JsonBeautifyScreenState extends State<JsonBeautifyScreen> {
         },
         onHorizontalDragUpdate: (details) =>
             resize(_inputFraction * availableWidth + details.delta.dx),
-        onHorizontalDragEnd: (_) => setState(() => _dividerDragging = false),
-        onHorizontalDragCancel: () => setState(() => _dividerDragging = false),
-        onDoubleTap: () => resize(availableWidth / 2),
+        onHorizontalDragEnd: (_) => _endDividerDrag(),
+        onHorizontalDragCancel: _endDividerDrag,
+        onDoubleTap: () {
+          resize(availableWidth / 2);
+          _commitDivider();
+        },
         child: SizedBox(
           width: 16,
           child: Center(
@@ -274,6 +328,13 @@ class _JsonBeautifyScreenState extends State<JsonBeautifyScreen> {
       ),
     ),
   );
+
+  void _commitDivider() => widget.onInputFractionChanged?.call(_inputFraction);
+
+  void _endDividerDrag() {
+    setState(() => _dividerDragging = false);
+    _commitDivider();
+  }
 
   Widget _viewTabs() => SizedBox(
     width: 144,

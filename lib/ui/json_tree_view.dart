@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../l10n/strings.dart';
 import 'components.dart';
+import 'json_find_controller.dart';
 
 /// Terminal-style branches, with children built only for expanded nodes.
 class JsonTreeView extends StatefulWidget {
@@ -12,9 +13,11 @@ class JsonTreeView extends StatefulWidget {
     super.key,
     required this.value,
     this.initiallyExpanded = true,
+    this.find,
   });
   final dynamic value;
   final bool initiallyExpanded;
+  final JsonFindController? find;
 
   @override
   State<JsonTreeView> createState() => _JsonTreeViewState();
@@ -23,15 +26,55 @@ class JsonTreeView extends StatefulWidget {
 class _JsonTreeViewState extends State<JsonTreeView> {
   final _scroll = ScrollController();
   final _expanded = <String>{};
+  final _matchAnchor = GlobalKey();
 
   @override
   void initState() {
     super.initState();
     if (widget.initiallyExpanded) _expanded.add('[]');
+    widget.find?.addListener(_searchChanged);
+    _revealMatch();
+  }
+
+  @override
+  void didUpdateWidget(JsonTreeView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.value != widget.value) {
+      _expanded.clear();
+      if (widget.initiallyExpanded) _expanded.add('[]');
+      _revealMatch();
+    }
+    if (oldWidget.find != widget.find) {
+      oldWidget.find?.removeListener(_searchChanged);
+      widget.find?.addListener(_searchChanged);
+      _revealMatch();
+    }
+  }
+
+  void _searchChanged() => setState(_revealMatch);
+
+  void _revealMatch() {
+    final match = widget.find?.active;
+    if (match == null) return;
+    for (var i = 0; i < match.path.length; i++) {
+      _expanded.add(jsonEncode(match.path.sublist(0, i)));
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final target = _matchAnchor.currentContext;
+      if (target != null) {
+        Scrollable.ensureVisible(
+          target,
+          alignment: .35,
+          duration: const Duration(milliseconds: 150),
+        );
+      }
+    });
   }
 
   @override
   void dispose() {
+    widget.find?.removeListener(_searchChanged);
     _scroll.dispose();
     super.dispose();
   }
@@ -49,6 +92,9 @@ class _JsonTreeViewState extends State<JsonTreeView> {
     final count = collection ? value.length as int : 0;
     final expandable = collection && count > 0;
     final id = jsonEncode(path);
+    final node = widget.find?.nodes[id];
+    final active = widget.find?.active;
+    final selected = active != null && jsonEncode(active.path) == id;
     final open = _expanded.contains(id);
     final prefix = name == null
         ? ''
@@ -73,14 +119,29 @@ class _JsonTreeViewState extends State<JsonTreeView> {
           ),
           if (label.isNotEmpty)
             TextSpan(
-              text: label,
+              children: node?.keyStart == null
+                  ? [TextSpan(text: label)]
+                  : [
+                      ...widget.find!.spans(
+                        label.substring(0, label.length - 2),
+                        node!.keyStart! + 1,
+                      ),
+                      const TextSpan(text: ': '),
+                    ],
               style: TextStyle(
                 color: colors.info,
                 fontWeight: collection ? FontWeight.w600 : FontWeight.normal,
               ),
             ),
           TextSpan(
-            text: collection ? bracket : jsonEncode(value),
+            children: node == null
+                ? [TextSpan(text: collection ? bracket : jsonEncode(value))]
+                : collection
+                ? [
+                    ...widget.find!.spans(bracket[0], node.valueStart),
+                    ...widget.find!.spans(bracket[1], node.end - 1),
+                  ]
+                : widget.find!.spans(jsonEncode(value), node.valueStart),
             style: TextStyle(
               color: collection
                   ? colors.accent
@@ -137,6 +198,16 @@ class _JsonTreeViewState extends State<JsonTreeView> {
       else
         row,
     ];
+    if (selected) {
+      result[0] = Container(
+        key: _matchAnchor,
+        decoration: BoxDecoration(
+          color: colors.accent.withValues(alpha: .08),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: result[0],
+      );
+    }
     if (expandable && open) {
       final entries = value is Map
           ? value.entries.toList()

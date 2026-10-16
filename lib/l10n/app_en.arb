@@ -232,5 +232,60 @@
   "tokenRotationHint": "Reset disconnects clients using the old token. Copy setup again after a reset. Keep tokens out of Git. For Android USB, use adb reverse and host 127.0.0.1.",
   "redactSensitiveData": "Redact sensitive data",
   "limitCapture": "Limit capture",
-  "captureOptionsHint": "Apply & restart, then copy SDK setup and reload your React Native app. Changes apply to new captures."
+  "captureOptionsHint": "Apply & restart, then copy SDK setup and reload your React Native app. Changes apply to new captures.",
+  "imagePreview": "Image preview",
+  "openImage": "Open image",
+  "imageUnavailable": "Unable to preview this image. The captured body may be incomplete or the image format unsupported. Use Raw to inspect the body.",
+  "zoomIn": "Zoom in",
+  "zoomOut": "Zoom out",
+  "fitImage": "Fit image",
+  "requestHeader": "Request header",
+  "requestBody": "Request body",
+  "responseHeader": "Response header",
+  "responseBody": "Response body",
+  "findInJson": "Find in JSON",
+  "findMatchCase": "Match case",
+  "findWholeWord": "Match whole word",
+  "findRegex": "Use regular expression",
+  "findPrevious": "Previous match (Shift+Enter)",
+  "findNext": "Next match (Enter)",
+  "findNoResults": "No results",
+  "findInvalidRegex": "Invalid regex",
+  "findMatchCount": "{current} of {total}",
+  "@findMatchCount": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsNotice": "Notice",
+  "languageSaved": "Language updated.",
+  "themeSaved": "Theme updated.",
+  "invalidPortNotice": "Settings not saved. Enter a port from 1 to 65535.",
+  "clipboardFailed": "Could not copy to clipboard. Please try again.",
+  "mcpEnabledNotice": "MCP enabled. Ready for client connections.",
+  "mcpDisabledNotice": "MCP disabled.",
+  "mcpPortSaved": "MCP port saved. MCP server restarted.",
+  "mcpPortSavedDisabled": "MCP port saved. MCP is still disabled.",
+  "mcpSetupCopied": "MCP setup command copied.",
+  "mcpConfigCopied": "MCP configuration copied.",
+  "settingsPendingApply": "Changes are not applied yet. Select Apply & restart.",
+  "settingsNoPendingChanges": "No pending changes.",
+  "securityApplied": "Security settings applied. Copy SDK setup again and reload your React Native app.",
+  "sdkSetupCopied": "SDK setup copied.",
+  "sdkSetupCopiedPending": "Copied the active SDK setup. Apply pending changes, then copy again.",
+  "pairingTokenReset": "Pairing token reset. Copy SDK setup again and reload your React Native app.",
+  "mcpTokenReset": "MCP token reset. Copy MCP setup again and update your AI client.",
+  "tokenResetRestartFailed": "Token reset, but the server could not restart: {error}. Copy setup again and retry the server.",
+  "@tokenResetRestartFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  }
 }

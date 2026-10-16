@@ -6,6 +6,7 @@ import '../services/viewer_server.dart';
 import '../services/viewer_mcp_server.dart';
 import 'components.dart';
 import 'connection_security_panel.dart';
+import 'settings_feedback.dart';
 import 'viewer_dropdown.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -55,6 +56,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() => _savingLanguage = true);
     try {
       await widget.settings.setLanguage(code);
+      await WidgetsBinding.instance.endOfFrame;
+      if (mounted) showSettingsFeedback(context, context.l10n.languageSaved);
     } catch (_) {
       if (mounted) _notice(context.l10n.settingsSaveFailed);
     } finally {
@@ -67,6 +70,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() => _savingTheme = true);
     try {
       await widget.settings.setThemeMode(mode);
+      await WidgetsBinding.instance.endOfFrame;
+      if (mounted) showSettingsFeedback(context, context.l10n.themeSaved);
     } catch (_) {
       if (mounted) _notice(context.l10n.settingsSaveFailed);
     } finally {
@@ -77,7 +82,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _savePort() async {
     final port = int.tryParse(_port.text.trim());
     setState(() => _invalidPort = port == null || port < 1 || port > 65535);
-    if (_invalidPort) return;
+    if (_invalidPort) {
+      showSettingsFeedback(
+        context,
+        context.l10n.invalidPortNotice,
+        kind: SettingsFeedbackKind.warning,
+      );
+      return;
+    }
     setState(() => _savingPort = true);
     try {
       final preferences = widget.settings.preferences;
@@ -88,11 +100,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
       await widget.server.stop();
       await widget.server.start(port: port!);
       if (mounted) {
-        _notice(
-          widget.server.running
-              ? context.l10n.portSaved
-              : context.l10n.serverStartFailed(widget.server.error ?? ''),
-        );
+        if (widget.server.running) {
+          showSettingsFeedback(context, context.l10n.portSaved);
+        } else {
+          _notice(context.l10n.serverStartFailed(widget.server.error ?? ''));
+        }
       }
     } catch (_) {
       if (mounted) _notice(context.l10n.settingsSaveFailed);
@@ -102,7 +114,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _notice(String text) =>
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+      showSettingsFeedback(context, text, kind: SettingsFeedbackKind.error);
 
   Future<void> _changeMcp(bool enabled) async {
     setState(() => _savingMcp = true);
@@ -112,6 +124,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
         enabled: enabled,
         port: widget.settings.mcpPort,
       );
+      if (mounted) {
+        if (widget.mcpServer.error != null ||
+            (enabled && !widget.mcpServer.running)) {
+          _notice(context.l10n.serverStartFailed(widget.mcpServer.error ?? ''));
+        } else {
+          showSettingsFeedback(
+            context,
+            enabled
+                ? context.l10n.mcpEnabledNotice
+                : context.l10n.mcpDisabledNotice,
+          );
+        }
+      }
     } catch (_) {
       if (mounted) _notice(context.l10n.settingsSaveFailed);
     } finally {
@@ -122,7 +147,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _saveMcpPort() async {
     final port = int.tryParse(_mcpPort.text.trim());
     setState(() => _invalidMcpPort = port == null || port < 1 || port > 65535);
-    if (_invalidMcpPort) return;
+    if (_invalidMcpPort) {
+      showSettingsFeedback(
+        context,
+        context.l10n.invalidPortNotice,
+        kind: SettingsFeedbackKind.warning,
+      );
+      return;
+    }
     setState(() => _savingMcp = true);
     try {
       final changed = widget.settings.mcpPort != port;
@@ -132,8 +164,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
         port: port,
         restart: !changed,
       );
-      if (mounted && widget.mcpServer.error == null) {
-        _notice(context.l10n.portSaved);
+      if (mounted) {
+        if (widget.mcpServer.error != null ||
+            (widget.settings.mcpEnabled && !widget.mcpServer.running)) {
+          _notice(context.l10n.serverStartFailed(widget.mcpServer.error ?? ''));
+        } else if (widget.settings.mcpEnabled) {
+          showSettingsFeedback(context, context.l10n.mcpPortSaved);
+        } else {
+          showSettingsFeedback(
+            context,
+            context.l10n.mcpPortSavedDisabled,
+            kind: SettingsFeedbackKind.info,
+          );
+        }
       }
     } catch (_) {
       if (mounted) _notice(context.l10n.settingsSaveFailed);
@@ -396,7 +439,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
       menuChildren: [
         MenuItemButton(
           key: const ValueKey('copy-mcp-json'),
-          onPressed: () => copyText(context, mcp.clientConfiguration),
+          onPressed: () => copySettingsText(
+            context,
+            mcp.clientConfiguration,
+            message: context.l10n.mcpConfigCopied,
+          ),
           style: const ButtonStyle(
             minimumSize: WidgetStatePropertyAll(Size(0, 44)),
           ),
@@ -405,7 +452,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         MenuItemButton(
           key: const ValueKey('copy-mcp-codex'),
-          onPressed: () => copyText(context, mcp.codexConfiguration),
+          onPressed: () => copySettingsText(
+            context,
+            mcp.codexConfiguration,
+            message: context.l10n.mcpConfigCopied,
+          ),
           style: const ButtonStyle(
             minimumSize: WidgetStatePropertyAll(Size(0, 44)),
           ),
@@ -423,8 +474,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Flexible(
                 child: FilledButton.icon(
                   key: const ValueKey('copy-mcp-setup'),
-                  onPressed: () => copyText(context, mcp.setupCommand),
+                  onPressed: () => copySettingsText(
+                    context,
+                    mcp.setupCommand,
+                    message: context.l10n.mcpSetupCopied,
+                  ),
                   style: FilledButton.styleFrom(
+                    visualDensity: VisualDensity.standard,
+                    overlayColor: Colors.white,
                     minimumSize: const Size(0, 44),
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     backgroundColor: Colors.transparent,
@@ -449,6 +506,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ? controller.close()
                       : controller.open(),
                   style: IconButton.styleFrom(
+                    visualDensity: VisualDensity.standard,
+                    overlayColor: Colors.white,
                     minimumSize: const Size(44, 44),
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     foregroundColor: Colors.white,

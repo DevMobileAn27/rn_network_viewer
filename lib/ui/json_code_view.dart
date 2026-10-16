@@ -4,11 +4,13 @@ import 'package:flutter/material.dart';
 
 import '../l10n/strings.dart';
 import 'components.dart';
+import 'json_find_controller.dart';
 
 /// A selectable JSON document; the gutter is kept out of copied text.
 class JsonCodeView extends StatefulWidget {
-  const JsonCodeView({super.key, required this.value});
+  const JsonCodeView({super.key, required this.value, this.find});
   final dynamic value;
+  final JsonFindController? find;
 
   @override
   State<JsonCodeView> createState() => _JsonCodeViewState();
@@ -20,22 +22,40 @@ class _JsonCodeViewState extends State<JsonCodeView> {
   late List<String> _lines;
   final _ranges = <int, int>{};
   final _collapsed = <int>{};
+  final _matchAnchor = GlobalKey();
+  final _lineOffsets = <int>[];
 
   @override
   void initState() {
     super.initState();
     _format();
+    widget.find?.addListener(_searchChanged);
+    _revealMatch();
   }
 
   @override
   void didUpdateWidget(JsonCodeView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.value != oldWidget.value) _format();
+    if (widget.value != oldWidget.value) {
+      _format();
+      _revealMatch();
+    }
+    if (widget.find != oldWidget.find) {
+      oldWidget.find?.removeListener(_searchChanged);
+      widget.find?.addListener(_searchChanged);
+      _revealMatch();
+    }
   }
 
   void _format() {
     _document = const JsonEncoder.withIndent('  ').convert(widget.value);
     _lines = _document.split('\n');
+    _lineOffsets.clear();
+    var offset = 0;
+    for (final text in _lines) {
+      _lineOffsets.add(offset);
+      offset += text.length + 1;
+    }
     _ranges.clear();
     _collapsed.clear();
     final openings = <int>[];
@@ -65,8 +85,35 @@ class _JsonCodeViewState extends State<JsonCodeView> {
 
   @override
   void dispose() {
+    widget.find?.removeListener(_searchChanged);
     _scroll.dispose();
     super.dispose();
+  }
+
+  void _searchChanged() {
+    setState(_revealMatch);
+  }
+
+  void _revealMatch() {
+    final match = widget.find?.active;
+    if (match == null) return;
+    _collapsed.removeWhere(
+      (line) =>
+          match.start <=
+              _lineOffsets[_ranges[line]!] + _lines[_ranges[line]!].length &&
+          match.end > _lineOffsets[line],
+    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final target = _matchAnchor.currentContext;
+      if (target != null) {
+        Scrollable.ensureVisible(
+          target,
+          alignment: .35,
+          duration: const Duration(milliseconds: 150),
+        );
+      }
+    });
   }
 
   @override
@@ -90,32 +137,52 @@ class _JsonCodeViewState extends State<JsonCodeView> {
       r'"(?:\\.|[^"\\])*"|true|false|null|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?',
     );
     final spans = <TextSpan>[];
-    var offset = 0;
-    for (final match in tokens.allMatches(document)) {
-      if (match.start > offset) {
-        spans.add(TextSpan(text: document.substring(offset, match.start)));
+    int? activeOffset;
+    var renderedOffset = 0;
+    for (var i = 0; i < visibleLines.length; i++) {
+      final line = visibleLines[i];
+      final text = _lines[line];
+      final base = _lineOffsets[line];
+      final active = widget.find?.active;
+      if (active != null &&
+          active.start >= base &&
+          active.start <= base + text.length) {
+        activeOffset = renderedOffset + active.start - base;
       }
-      final token = match.group(0)!;
-      final isKey =
-          token.startsWith('"') &&
-          match.end < document.length &&
-          document[match.end] == ':';
-      final color = token.startsWith('"')
-          ? (isKey ? colors.info : colors.string)
-          : token == 'null'
-          ? colors.muted
-          : token == 'true' || token == 'false'
-          ? colors.method
-          : colors.warning;
-      spans.add(
-        TextSpan(
-          text: token,
-          style: TextStyle(color: color),
-        ),
-      );
-      offset = match.end;
+      void add(String text, int offset, [TextStyle? style]) {
+        spans.addAll(
+          widget.find?.spans(text, base + offset, style: style) ??
+              [TextSpan(text: text, style: style)],
+        );
+      }
+
+      var offset = 0;
+      for (final match in tokens.allMatches(text)) {
+        if (match.start > offset) {
+          add(text.substring(offset, match.start), offset);
+        }
+        final token = match.group(0)!;
+        final isKey =
+            token.startsWith('"') &&
+            match.end < text.length &&
+            text[match.end] == ':';
+        final color = token.startsWith('"')
+            ? (isKey ? colors.info : colors.string)
+            : token == 'null'
+            ? colors.muted
+            : token == 'true' || token == 'false'
+            ? colors.method
+            : colors.warning;
+        add(token, match.start, TextStyle(color: color));
+        offset = match.end;
+      }
+      add(text.substring(offset), offset);
+      if (visibleText[i].length > text.length) {
+        spans.add(TextSpan(text: visibleText[i].substring(text.length)));
+      }
+      if (i < visibleLines.length - 1) spans.add(const TextSpan(text: '\n'));
+      renderedOffset += visibleText[i].length + 1;
     }
-    spans.add(TextSpan(text: document.substring(offset)));
     final strut = StrutStyle.fromTextStyle(codeStyle, forceStrutHeight: true);
     final metrics = TextPainter(
       text: TextSpan(text: document, style: codeStyle),
@@ -125,6 +192,13 @@ class _JsonCodeViewState extends State<JsonCodeView> {
     )..layout();
     final lineMetrics = metrics.computeLineMetrics();
     final documentHeight = metrics.height;
+    Rect? matchRect;
+    if (activeOffset != null && activeOffset < document.length) {
+      final boxes = metrics.getBoxesForSelection(
+        TextSelection(baseOffset: activeOffset, extentOffset: activeOffset + 1),
+      );
+      if (boxes.isNotEmpty) matchRect = boxes.first.toRect();
+    }
     metrics.text = TextSpan(text: '${_lines.length}', style: codeStyle);
     metrics.layout();
     final numberWidth = metrics.width.ceilToDouble();
@@ -201,12 +275,28 @@ class _JsonCodeViewState extends State<JsonCodeView> {
                     ],
                   ),
                 ),
-                SelectableText.rich(
-                  TextSpan(children: spans),
-                  strutStyle: strut,
-                  style: codeStyle.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
+                Stack(
+                  children: [
+                    SelectableText.rich(
+                      TextSpan(children: spans),
+                      strutStyle: strut,
+                      style: codeStyle.copyWith(
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                    ),
+                    if (matchRect != null)
+                      Positioned(
+                        left: matchRect.left,
+                        top: matchRect.top,
+                        child: IgnorePointer(
+                          child: SizedBox(
+                            key: _matchAnchor,
+                            width: matchRect.width,
+                            height: matchRect.height,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ],
             ),

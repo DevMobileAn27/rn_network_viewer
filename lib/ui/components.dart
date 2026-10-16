@@ -8,6 +8,8 @@ import 'viewer_theme.dart';
 import '../l10n/strings.dart';
 import 'json_code_view.dart';
 import 'json_tree_view.dart';
+import 'json_find_bar.dart';
+import 'json_find_controller.dart';
 
 export 'viewer_theme.dart';
 
@@ -38,22 +40,39 @@ Future<void> copyText(
 }
 
 class StatusChip extends StatelessWidget {
-  const StatusChip(this.text, {super.key, this.color});
+  const StatusChip(
+    this.text, {
+    super.key,
+    this.color,
+    this.prominent = false,
+    this.selected = false,
+  });
   final String text;
   final Color? color;
+  final bool prominent;
+  final bool selected;
   @override
   Widget build(BuildContext context) => Container(
     padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
     decoration: BoxDecoration(
-      color: (color ?? context.palette.accent).withValues(alpha: .1),
+      color: (color ?? context.palette.accent).withValues(
+        alpha: prominent ? 1 : .1,
+      ),
       borderRadius: BorderRadius.circular(5),
+      border: prominent && selected
+          ? Border.all(color: Colors.white.withValues(alpha: .8))
+          : null,
     ),
     child: Text(
       text,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
       style: TextStyle(
-        color: color ?? context.palette.accent,
+        color: prominent
+            ? (context.palette.dark ? const Color(0xff101828) : Colors.white)
+            : color ?? context.palette.accent,
         fontSize: 11,
-        fontWeight: FontWeight.w600,
+        fontWeight: prominent ? FontWeight.w700 : FontWeight.w600,
       ),
     ),
   );
@@ -106,11 +125,17 @@ class DataSection extends StatefulWidget {
     super.key,
     this.body = false,
     this.initiallyExpanded = true,
+    this.preview,
+    this.searchable = false,
+    this.fillAvailable = false,
   });
   final String title;
   final dynamic value;
   final bool body;
   final bool initiallyExpanded;
+  final Widget? preview;
+  final bool searchable;
+  final bool fillAvailable;
 
   @override
   State<DataSection> createState() => _DataSectionState();
@@ -120,6 +145,17 @@ class _DataSectionState extends State<DataSection> {
   bool _tree = false;
   late dynamic _decoded;
   late bool _isJson;
+  final _find = JsonFindController();
+  final _findFocus = FocusNode();
+  bool get _canFind =>
+      widget.searchable && widget.body && _isJson && widget.preview == null;
+
+  @override
+  void dispose() {
+    _find.dispose();
+    _findFocus.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -130,7 +166,9 @@ class _DataSectionState extends State<DataSection> {
   @override
   void didUpdateWidget(DataSection oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.value != oldWidget.value || widget.body != oldWidget.body) {
+    if (widget.value != oldWidget.value ||
+        widget.body != oldWidget.body ||
+        widget.searchable != oldWidget.searchable) {
       _decode();
     }
   }
@@ -146,114 +184,187 @@ class _DataSectionState extends State<DataSection> {
         /* plain text */
       }
     }
+    if (widget.searchable) _find.setValue(_decoded);
+  }
+
+  Widget _content(BuildContext context) {
+    final value = widget.value;
+    if (value == null || !widget.body && value is Map && value.isEmpty) {
+      return Text(
+        context.l10n.notCaptured,
+        style: TextStyle(
+          color: context.palette.muted,
+          fontStyle: FontStyle.italic,
+        ),
+      );
+    }
+    if (widget.preview != null) return widget.preview!;
+    if (widget.body && _isJson) {
+      return _tree
+          ? JsonTreeView(
+              value: _decoded,
+              initiallyExpanded: widget.initiallyExpanded,
+              find: _canFind ? _find : null,
+            )
+          : JsonCodeView(value: _decoded, find: _canFind ? _find : null);
+    }
+    if (_decoded is Map || _decoded is List) {
+      return JsonTree(
+        value: _decoded,
+        initiallyExpanded: widget.initiallyExpanded,
+      );
+    }
+    return SelectableText('$value', style: mono);
   }
 
   @override
   Widget build(BuildContext context) {
     final title = widget.title;
     final value = widget.value;
-    return Padding(
+    final section = Padding(
       padding: EdgeInsets.fromLTRB(18, 12, 18, 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  title.toUpperCase(),
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.2,
-                    color: context.palette.muted,
-                  ),
+          if (_canFind)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                title.toUpperCase(),
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.2,
+                  color: context.palette.muted,
                 ),
               ),
-              if (widget.body && _isJson) ...[
-                SizedBox(
-                  width: 128,
-                  height: 30,
-                  child: DefaultTabController(
-                    length: 2,
-                    initialIndex: _tree ? 1 : 0,
-                    child: Material(
-                      color: context.palette.input,
-                      borderRadius: BorderRadius.circular(30),
-                      clipBehavior: Clip.antiAlias,
-                      child: Padding(
-                        padding: const EdgeInsets.all(3),
-                        child: TabBar(
-                          splashBorderRadius: BorderRadius.circular(30),
-                          onTap: (index) => setState(() => _tree = index == 1),
-                          dividerColor: Colors.transparent,
-                          indicatorSize: TabBarIndicatorSize.tab,
-                          indicator: BoxDecoration(
-                            color: context.palette.surface,
-                            borderRadius: BorderRadius.circular(30),
-                            border: Border.all(color: context.palette.line),
-                          ),
-                          labelColor: context.palette.accent,
-                          unselectedLabelColor: context.palette.muted,
-                          labelStyle: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                          ),
-                          unselectedLabelStyle: const TextStyle(fontSize: 11),
-                          labelPadding: EdgeInsets.zero,
-                          tabs: [
-                            Tooltip(
-                              message: context.l10n.formattedJson,
-                              child: const Tab(text: 'JSON'),
-                            ),
-                            Tooltip(
-                              message: context.l10n.treeView,
-                              child: Tab(text: context.l10n.treeTab),
-                            ),
-                          ],
-                        ),
+            ),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final width = _canFind && constraints.maxWidth < 540
+                  ? 540.0
+                  : constraints.maxWidth;
+              return SingleChildScrollView(
+                key: const ValueKey('json-body-toolbar'),
+                scrollDirection: Axis.horizontal,
+                child: SizedBox(
+                  width: width,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _canFind
+                            ? Align(
+                                alignment: Alignment.centerRight,
+                                child: JsonFindBar(
+                                  controller: _find,
+                                  focusNode: _findFocus,
+                                ),
+                              )
+                            : Text(
+                                title.toUpperCase(),
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 1.2,
+                                  color: context.palette.muted,
+                                ),
+                              ),
                       ),
-                    ),
+                      if (_canFind) const SizedBox(width: 8),
+                      if (widget.body && _isJson) ...[
+                        SizedBox(
+                          width: 128,
+                          height: 30,
+                          child: DefaultTabController(
+                            length: 2,
+                            initialIndex: _tree ? 1 : 0,
+                            child: Material(
+                              color: context.palette.input,
+                              borderRadius: BorderRadius.circular(30),
+                              clipBehavior: Clip.antiAlias,
+                              child: Padding(
+                                padding: const EdgeInsets.all(3),
+                                child: TabBar(
+                                  splashBorderRadius: BorderRadius.circular(30),
+                                  onTap: (index) =>
+                                      setState(() => _tree = index == 1),
+                                  dividerColor: Colors.transparent,
+                                  indicatorSize: TabBarIndicatorSize.tab,
+                                  indicator: BoxDecoration(
+                                    color: context.palette.surface,
+                                    borderRadius: BorderRadius.circular(30),
+                                    border: Border.all(
+                                      color: context.palette.line,
+                                    ),
+                                  ),
+                                  labelColor: context.palette.accent,
+                                  unselectedLabelColor: context.palette.muted,
+                                  labelStyle: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  unselectedLabelStyle: const TextStyle(
+                                    fontSize: 11,
+                                  ),
+                                  labelPadding: EdgeInsets.zero,
+                                  tabs: [
+                                    Tooltip(
+                                      message: context.l10n.formattedJson,
+                                      child: const Tab(text: 'JSON'),
+                                    ),
+                                    Tooltip(
+                                      message: context.l10n.treeView,
+                                      child: Tab(text: context.l10n.treeTab),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                      ],
+                      if (value != null)
+                        IconButton(
+                          tooltip: context.l10n.copySection(title),
+                          iconSize: 15,
+                          visualDensity: VisualDensity.compact,
+                          onPressed: () => copyText(context, pretty(value)),
+                          icon: Icon(Icons.copy_outlined),
+                        ),
+                    ],
                   ),
                 ),
-                const SizedBox(width: 4),
-              ],
-              if (value != null)
-                IconButton(
-                  tooltip: context.l10n.copySection(title),
-                  iconSize: 15,
-                  visualDensity: VisualDensity.compact,
-                  onPressed: () => copyText(context, pretty(value)),
-                  icon: Icon(Icons.copy_outlined),
-                ),
-            ],
+              );
+            },
           ),
           SizedBox(height: 6),
-          if (value == null || !widget.body && value is Map && value.isEmpty)
-            Text(
-              context.l10n.notCaptured,
-              style: TextStyle(
-                color: context.palette.muted,
-                fontStyle: FontStyle.italic,
+          if (widget.fillAvailable)
+            Expanded(
+              child: SingleChildScrollView(
+                key: const ValueKey('json-body-scroll'),
+                child: _content(context),
               ),
             )
-          else if (widget.body && _isJson && !_tree)
-            JsonCodeView(value: _decoded)
-          else if (widget.body && _isJson && _tree)
-            JsonTreeView(
-              value: _decoded,
-              initiallyExpanded: widget.initiallyExpanded,
-            )
-          else if (_decoded is Map || _decoded is List)
-            JsonTree(
-              value: _decoded,
-              initiallyExpanded: widget.initiallyExpanded,
-            )
           else
-            SelectableText('$value', style: mono),
+            _content(context),
         ],
       ),
     );
+    return _canFind
+        ? CallbackShortcuts(
+            bindings: {
+              const SingleActivator(LogicalKeyboardKey.keyF, meta: true):
+                  _findFocus.requestFocus,
+              const SingleActivator(LogicalKeyboardKey.keyF, control: true):
+                  _findFocus.requestFocus,
+              const SingleActivator(LogicalKeyboardKey.f3): () => _find.move(1),
+              const SingleActivator(LogicalKeyboardKey.f3, shift: true): () =>
+                  _find.move(-1),
+            },
+            child: Focus(child: section),
+          )
+        : section;
   }
 }
 

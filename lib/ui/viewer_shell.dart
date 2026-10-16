@@ -139,6 +139,22 @@ class _ViewerShellState extends State<ViewerShell>
     context,
   ).showSnackBar(SnackBar(content: Text(message)));
 
+  Future<void> _rememberLayout(Future<void> save) async {
+    try {
+      await save;
+    } catch (_) {
+      if (mounted) _notice(context.l10n.settingsSaveFailed);
+    }
+  }
+
+  Widget _networkInspector(NetworkRecord record) => NetworkInspector(
+    key: ValueKey(record.key),
+    record: record,
+    initialTab: widget.settings.requestDetailTab,
+    onTabChanged: (index) =>
+        _rememberLayout(widget.settings.setRequestDetailTab(index)),
+  );
+
   Future<void> _settings() => Navigator.of(context).push<void>(
     MaterialPageRoute(
       builder: (context) => SettingsScreen(
@@ -241,6 +257,22 @@ class _ViewerShellState extends State<ViewerShell>
                                 Expanded(
                                   child: inspector
                                       ? ResizableSplitView(
+                                          key: ValueKey(_console),
+                                          initialWidth: _console
+                                              ? widget
+                                                    .settings
+                                                    .consoleInspectorWidth
+                                              : widget
+                                                    .settings
+                                                    .networkInspectorWidth,
+                                          onWidthChanged: (width) =>
+                                              _rememberLayout(
+                                                widget.settings
+                                                    .setInspectorWidth(
+                                                      width,
+                                                      console: _console,
+                                                    ),
+                                              ),
                                           list: _console
                                               ? _consoleList(logs, true)
                                               : _networkList(requests, true),
@@ -255,11 +287,8 @@ class _ViewerShellState extends State<ViewerShell>
                                                       )
                                               : selectedRequest == null
                                               ? _noSelection()
-                                              : NetworkInspector(
-                                                  key: ValueKey(
-                                                    selectedRequest.key,
-                                                  ),
-                                                  record: selectedRequest,
+                                              : _networkInspector(
+                                                  selectedRequest,
                                                 ),
                                         )
                                       : _console
@@ -268,7 +297,16 @@ class _ViewerShellState extends State<ViewerShell>
                                 ),
                               ],
                             ),
-                            const JsonBeautifyScreen(),
+                            JsonBeautifyScreen(
+                              initialInputFraction:
+                                  widget.settings.jsonInputFraction,
+                              onInputFractionChanged: (fraction) =>
+                                  _rememberLayout(
+                                    widget.settings.setJsonInputFraction(
+                                      fraction,
+                                    ),
+                                  ),
+                            ),
                           ],
                         ),
                       ),
@@ -524,6 +562,8 @@ class _ViewerShellState extends State<ViewerShell>
                 ['All levels', 'log', 'info', 'warn', 'error', 'debug'],
                 (v) => setState(() => _level = v),
                 140,
+                colorFor: (v) =>
+                    v == 'All levels' ? null : context.palette.logColor(v),
               )
             else ...[
               _dropdown(
@@ -641,24 +681,33 @@ class _ViewerShellState extends State<ViewerShell>
             itemExtent: 68,
             itemBuilder: (context, index) {
               final r = requests[index];
+              final selected = _networkKey == r.key;
+              final colors = context.palette;
+              final secondaryColor = selected
+                  ? colors.onSelectedRowMuted
+                  : colors.muted;
               final uri = Uri.tryParse(r.url);
               final path = uri == null || uri.host.isEmpty
                   ? (r.request.isEmpty ? context.l10n.missingRequest : r.url)
                   : '${uri.path.isEmpty ? '/' : uri.path}${uri.hasQuery ? '?${uri.query}' : ''}';
               return Material(
-                color: _networkKey == r.key
-                    ? context.palette.accent.withValues(alpha: .07)
-                    : Colors.transparent,
+                color: selected ? colors.selectedRow : Colors.transparent,
                 child: InkWell(
                   onTap: () {
                     setState(() => _networkKey = r.key);
-                    if (!inspector) _detail(() => NetworkInspector(record: r));
+                    if (!inspector) _detail(() => _networkInspector(r));
                   },
                   child: Container(
-                    padding: EdgeInsets.symmetric(horizontal: 18),
+                    padding: EdgeInsets.only(left: 14, right: 18),
                     decoration: BoxDecoration(
                       border: Border(
-                        bottom: BorderSide(color: context.palette.line),
+                        left: BorderSide(
+                          width: 4,
+                          color: selected
+                              ? colors.selectedRowMarker
+                              : Colors.transparent,
+                        ),
+                        bottom: BorderSide(color: colors.line),
                       ),
                     ),
                     child: Row(
@@ -669,7 +718,9 @@ class _ViewerShellState extends State<ViewerShell>
                             alignment: Alignment.centerLeft,
                             child: StatusChip(
                               r.method,
-                              color: context.palette.methodColor(r.method),
+                              prominent: true,
+                              selected: selected,
+                              color: colors.methodColor(r.method),
                             ),
                           ),
                         ),
@@ -682,7 +733,13 @@ class _ViewerShellState extends State<ViewerShell>
                                 path,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: TextStyle(fontSize: 12),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: selected ? colors.onSelectedRow : null,
+                                  fontWeight: selected
+                                      ? FontWeight.w600
+                                      : FontWeight.normal,
+                                ),
                               ),
                               SizedBox(height: 5),
                               Text(
@@ -691,7 +748,7 @@ class _ViewerShellState extends State<ViewerShell>
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
                                   fontSize: 10,
-                                  color: context.palette.muted,
+                                  color: secondaryColor,
                                 ),
                               ),
                             ],
@@ -700,14 +757,13 @@ class _ViewerShellState extends State<ViewerShell>
                         SizedBox(width: 8),
                         SizedBox(
                           width: 82,
-                          child: Text(
-                            filterLabel(context, r.state),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: context.palette.statusColor(
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: StatusChip(
+                              filterLabel(context, r.state),
+                              prominent: true,
+                              selected: selected,
+                              color: colors.statusColor(
                                 r.status,
                                 transportError: r.error.isNotEmpty,
                               ),
@@ -721,7 +777,7 @@ class _ViewerShellState extends State<ViewerShell>
                             textAlign: TextAlign.right,
                             style: TextStyle(
                               fontSize: 11,
-                              color: context.palette.muted,
+                              color: secondaryColor,
                             ),
                           ),
                         ),
@@ -743,17 +799,12 @@ class _ViewerShellState extends State<ViewerShell>
       itemCount: logs.length,
       itemBuilder: (context, index) {
         final r = logs[index];
-        final color = r.level == 'error'
-            ? context.palette.danger
-            : r.level == 'warn'
-            ? context.palette.warning
-            : r.level == 'info'
-            ? context.palette.info
-            : context.palette.muted;
+        final selected = _logId == r.id;
+        final palette = context.palette;
+        final color = palette.logColor(r.level);
         return Material(
-          color: _logId == r.id
-              ? context.palette.accent.withValues(alpha: .07)
-              : Colors.transparent,
+          key: ValueKey('console-row-${r.id}'),
+          color: selected ? palette.selectedRow : Colors.transparent,
           child: InkWell(
             onTap: () {
               setState(() => _logId = r.id);
@@ -767,46 +818,61 @@ class _ViewerShellState extends State<ViewerShell>
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  SizedBox(
-                    width: 74,
-                    child: Text(
-                      clockTime(r.time),
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: context.palette.muted,
-                        height: 1.9,
-                      ),
-                    ),
+                  Container(
+                    width: 3,
+                    height: 32,
+                    color: selected ? palette.selectedRowMarker : color,
                   ),
-                  SizedBox(
-                    width: 82,
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: StatusChip(r.level.toUpperCase(), color: color),
-                    ),
-                  ),
-                  SizedBox(width: 8),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        Wrap(
+                          spacing: 10,
+                          runSpacing: 6,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Text(
+                              clockTime(r.time),
+                              maxLines: 1,
+                              softWrap: false,
+                              style: mono.copyWith(
+                                fontSize: 10,
+                                color: selected
+                                    ? palette.onSelectedRowMuted
+                                    : palette.muted,
+                              ),
+                            ),
+                            StatusChip(
+                              r.level.toUpperCase(),
+                              color: color,
+                              prominent: true,
+                              selected: selected,
+                            ),
+                            Text(
+                              store.sessions[r.sessionId]?.name ?? '',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: selected
+                                    ? palette.onSelectedRowMuted
+                                    : palette.muted,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 7),
                         Text(
                           r.message,
                           style: mono.copyWith(
-                            color: r.level == 'error'
-                                ? context.palette.danger
+                            color: selected
+                                ? palette.onSelectedRow
+                                : r.level == 'error'
+                                ? palette.danger
                                 : null,
                           ),
-                          maxLines: 4,
+                          maxLines: 6,
                           overflow: TextOverflow.ellipsis,
-                        ),
-                        SizedBox(height: 4),
-                        Text(
-                          store.sessions[r.sessionId]?.name ?? '',
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: context.palette.muted,
-                          ),
                         ),
                       ],
                     ),
@@ -814,7 +880,9 @@ class _ViewerShellState extends State<ViewerShell>
                   Icon(
                     Icons.chevron_right,
                     size: 16,
-                    color: context.palette.muted,
+                    color: selected
+                        ? palette.onSelectedRowMuted
+                        : palette.muted,
                   ),
                 ],
               ),

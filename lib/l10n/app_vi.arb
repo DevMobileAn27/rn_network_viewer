@@ -232,5 +232,60 @@
   "tokenRotationHint": "Đổi token sẽ ngắt client cũ. Sao chép lại setup sau khi đổi. Không lưu token vào Git. Android USB dùng adb reverse và host 127.0.0.1.",
   "redactSensitiveData": "Che dữ liệu nhạy cảm",
   "limitCapture": "Giới hạn capture",
-  "captureOptionsHint": "Áp dụng & khởi động lại, rồi copy cấu hình SDK và reload app React Native. Áp dụng cho dữ liệu mới."
+  "captureOptionsHint": "Áp dụng & khởi động lại, rồi copy cấu hình SDK và reload app React Native. Áp dụng cho dữ liệu mới.",
+  "imagePreview": "Xem ảnh",
+  "openImage": "Mở ảnh lớn",
+  "imageUnavailable": "Không thể xem ảnh. Dữ liệu có thể chưa đầy đủ hoặc định dạng ảnh chưa được hỗ trợ. Chọn Thô để xem body.",
+  "zoomIn": "Phóng to",
+  "zoomOut": "Thu nhỏ",
+  "fitImage": "Vừa khung ảnh",
+  "requestHeader": "Request header",
+  "requestBody": "Request body",
+  "responseHeader": "Response header",
+  "responseBody": "Response body",
+  "findInJson": "Tìm trong JSON",
+  "findMatchCase": "Phân biệt hoa thường",
+  "findWholeWord": "Tìm từ nguyên vẹn",
+  "findRegex": "Dùng biểu thức chính quy",
+  "findPrevious": "Kết quả trước (Shift+Enter)",
+  "findNext": "Kết quả sau (Enter)",
+  "findNoResults": "Không có kết quả",
+  "findInvalidRegex": "Regex không hợp lệ",
+  "findMatchCount": "{current} / {total}",
+  "@findMatchCount": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsNotice": "Thông báo",
+  "languageSaved": "Đã đổi ngôn ngữ.",
+  "themeSaved": "Đã đổi giao diện.",
+  "invalidPortNotice": "Chưa lưu cài đặt. Nhập cổng từ 1 đến 65535.",
+  "clipboardFailed": "Không thể sao chép. Vui lòng thử lại.",
+  "mcpEnabledNotice": "Đã bật MCP. Sẵn sàng nhận kết nối từ client.",
+  "mcpDisabledNotice": "Đã tắt MCP.",
+  "mcpPortSaved": "Đã lưu cổng MCP và khởi động lại MCP.",
+  "mcpPortSavedDisabled": "Đã lưu cổng MCP. MCP vẫn đang tắt.",
+  "mcpSetupCopied": "Đã sao chép lệnh cài đặt MCP.",
+  "mcpConfigCopied": "Đã sao chép cấu hình MCP.",
+  "settingsPendingApply": "Thay đổi chưa được áp dụng. Bấm Áp dụng và khởi động lại.",
+  "settingsNoPendingChanges": "Không có thay đổi cần áp dụng.",
+  "securityApplied": "Đã áp dụng cài đặt bảo mật. Sao chép lại SDK setup và reload app React Native.",
+  "sdkSetupCopied": "Đã sao chép SDK setup.",
+  "sdkSetupCopiedPending": "Đã sao chép SDK setup đang áp dụng. Áp dụng thay đổi rồi sao chép lại.",
+  "pairingTokenReset": "Đã reset pairing token. Sao chép lại SDK setup và reload app React Native.",
+  "mcpTokenReset": "Đã reset MCP token. Sao chép lại cấu hình MCP và cập nhật client AI.",
+  "tokenResetRestartFailed": "Đã reset token nhưng không thể khởi động lại server: {error}. Sao chép lại cấu hình và thử khởi động lại server.",
+  "@tokenResetRestartFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  }
 }

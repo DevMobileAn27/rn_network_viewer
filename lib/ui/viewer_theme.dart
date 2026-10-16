@@ -17,6 +17,11 @@ class ViewerPalette {
   Color get muted => dark ? const Color(0xff8d98a7) : const Color(0xff596778);
   Color get accent => dark ? const Color(0xff63ddbb) : const Color(0xff08785d);
   Color get primaryFill => const Color(0xff08785d);
+  Color get selectedRow =>
+      dark ? const Color(0xff065f46) : const Color(0xff047857);
+  Color get onSelectedRow => Colors.white;
+  Color get onSelectedRowMuted => const Color(0xffd1fae5);
+  Color get selectedRowMarker => const Color(0xff6ee7b7);
   Color get danger => dark ? const Color(0xffff848a) : const Color(0xffbd293a);
   Color get line => dark ? const Color(0xff2a3038) : const Color(0xffd6dde5);
   Color get warning => dark ? const Color(0xffe4bc87) : const Color(0xff8c560b);
@@ -24,29 +29,36 @@ class ViewerPalette {
   Color get method => dark ? const Color(0xffb6a3ed) : const Color(0xff7150ad);
   Color get string => dark ? const Color(0xffb2d9a0) : const Color(0xff39712a);
 
+  Color logColor(String level) => switch (level) {
+    'error' => methodColor('DELETE'),
+    'warn' => methodColor('PUT'),
+    'info' => methodColor('GET'),
+    'debug' => methodColor('PATCH'),
+    _ => methodColor('CONNECT'),
+  };
+
   Color methodColor(String method) => switch (method.toUpperCase()) {
-    'GET' => info,
-    'POST' => accent,
-    'PUT' => dark ? const Color(0xffffb570) : const Color(0xffa64b00),
-    'PATCH' => dark ? const Color(0xffc4a2ff) : const Color(0xff7946b5),
-    'DELETE' => danger,
-    'HEAD' => dark ? const Color(0xff6cd5e5) : const Color(0xff087887),
-    'OPTIONS' => dark ? const Color(0xffabaeff) : const Color(0xff5454b8),
-    'TRACE' => dark ? const Color(0xffffa4d2) : const Color(0xffa32b74),
-    'CONNECT' => dark ? const Color(0xffd4b59a) : const Color(0xff805c3d),
+    'GET' => dark ? const Color(0xff60a5fa) : const Color(0xff1d4ed8),
+    'POST' => dark ? const Color(0xff34d399) : const Color(0xff047857),
+    'PUT' => dark ? const Color(0xfffbbf24) : const Color(0xffb45309),
+    'PATCH' => dark ? const Color(0xffc084fc) : const Color(0xff7e22ce),
+    'DELETE' => dark ? const Color(0xfff87171) : const Color(0xffb91c1c),
+    'HEAD' => dark ? const Color(0xff22d3ee) : const Color(0xff0e7490),
+    'OPTIONS' => dark ? const Color(0xffa5b4fc) : const Color(0xff4338ca),
+    'TRACE' => dark ? const Color(0xfff472b6) : const Color(0xffbe185d),
+    'CONNECT' => dark ? const Color(0xffcbd5e1) : const Color(0xff475569),
     _ => muted,
   };
 
   Color statusColor(int? status, {bool transportError = false}) {
-    if (transportError) return danger;
+    if (transportError) return methodColor('DELETE');
     if (status == null) return muted;
     return switch (status) {
-      >= 100 && < 200 =>
-        dark ? const Color(0xff6cd5e5) : const Color(0xff087887),
-      >= 200 && < 300 => accent,
-      >= 300 && < 400 => info,
-      >= 400 && < 500 => warning,
-      >= 500 && < 600 => danger,
+      >= 100 && < 200 => methodColor('HEAD'),
+      >= 200 && < 300 => methodColor('POST'),
+      >= 300 && < 400 => methodColor('OPTIONS'),
+      >= 400 && < 500 => methodColor('PUT'),
+      >= 500 && < 600 => methodColor('DELETE'),
       _ => muted,
     };
   }
