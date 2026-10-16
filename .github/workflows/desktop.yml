@@ -84,7 +84,7 @@ jobs:
         if: matrix.target == 'macos'
         run: |
           mkdir -p build/release
-          lipo -verify_arch ${{ matrix.arch }} "build/macos/Build/Products/Release/RN Network Viewer.app/Contents/MacOS/RN Network Viewer"
+          lipo "build/macos/Build/Products/Release/RN Network Viewer.app/Contents/MacOS/RN Network Viewer" -verify_arch ${{ matrix.arch }}
           ditto -c -k --sequesterRsrc --keepParent "build/macos/Build/Products/Release/RN Network Viewer.app" "build/release/$ARCHIVE_NAME.zip"
           cd build/release
           shasum -a 256 "$ARCHIVE_NAME.zip" > "$ARCHIVE_NAME.sha256"
