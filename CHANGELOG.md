@@ -1,11 +1,13 @@
 # Changelog
 
-## Unreleased
+## 0.1.5 — 2026-10-19
 
 - Check for updates at startup and from Settings, with native confirmation, download and installation on macOS and Windows.
 - Sign update archives and generate separate GitHub Release feeds for Apple Silicon, Intel and Windows x64.
 - Add a Windows installer alongside portable ZIP downloads.
 - Require increasing build numbers and configured update signing secrets before release builds.
+- Show the installed app version and author in App updates.
+- Use dark gray Settings descriptions and green, red or yellow feedback for action results.
 
 ## 0.1.4 — 2026-10-19
 
