@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.4 — 2026-10-19
+
+- Document how to open trusted macOS downloads when blocked, including the app-specific quarantine command.
+- Update release metadata and download names for 0.1.4.
+
 ## 0.1.3 — 2026-10-16
 
 - Fix lipo argument order in macOS architecture verification before release packaging.

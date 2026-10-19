@@ -16,6 +16,17 @@
 3. **Windows:** mở file `.exe` trong thư mục đã giải nén, giữ nguyên các file và thư mục đi kèm.
 4. Kiểm tra trạng thái **Listening :38940** trên thanh công cụ.
 
+### Khi macOS chặn mở app
+
+Sau khi kéo app vào **Applications**, nếu macOS báo không thể xác minh nhà phát triển hoặc app bị hỏng, mở **Terminal** và chạy:
+
+```sh
+xattr -dr com.apple.quarantine "/Applications/RN Network Viewer.app"
+open "/Applications/RN Network Viewer.app"
+```
+
+Lệnh này gỡ thuộc tính quarantine của app. Chỉ dùng với bản tải từ [GitHub Releases chính thức](https://github.com/DevMobileAn27/rn_network_viewer/releases) mà bạn tin cậy.
+
 ## Kết nối app React Native
 
 Yêu cầu dự án React Native **0.74 trở lên**, chạy ở chế độ development.
