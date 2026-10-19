@@ -4,7 +4,19 @@ import 'package:flutter/services.dart';
 import '../l10n/strings.dart';
 import 'viewer_theme.dart';
 
-enum SettingsFeedbackKind { success, error, info, warning }
+enum SettingsFeedbackKind {
+  success,
+  error,
+  info,
+  warning;
+
+  Color color(ViewerPalette palette) => switch (this) {
+    success => palette.methodColor('POST'),
+    error => palette.danger,
+    info ||
+    warning => palette.dark ? const Color(0xfffacc15) : const Color(0xff8a6500),
+  };
+}
 
 void showSettingsFeedback(
   BuildContext context,
@@ -12,25 +24,19 @@ void showSettingsFeedback(
   SettingsFeedbackKind kind = SettingsFeedbackKind.success,
 }) {
   final palette = context.palette;
-  final (icon, color, title) = switch (kind) {
+  final color = kind.color(palette);
+  final (icon, title) = switch (kind) {
     SettingsFeedbackKind.success => (
       Icons.check_circle_outline,
-      palette.methodColor('POST'),
       context.l10n.success,
     ),
-    SettingsFeedbackKind.error => (
-      Icons.error_outline,
-      palette.danger,
-      context.l10n.error,
-    ),
+    SettingsFeedbackKind.error => (Icons.error_outline, context.l10n.error),
     SettingsFeedbackKind.info => (
       Icons.info_outline,
-      palette.info,
       context.l10n.settingsNotice,
     ),
     SettingsFeedbackKind.warning => (
       Icons.warning_amber_rounded,
-      palette.warning,
       context.l10n.settingsNotice,
     ),
   };
@@ -68,12 +74,7 @@ void showSettingsFeedback(
                     style: TextStyle(color: color, fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    message,
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                  ),
+                  Text(message, style: TextStyle(color: color)),
                 ],
               ),
             ),

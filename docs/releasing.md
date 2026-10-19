@@ -16,7 +16,7 @@
 
    Giữ hai dòng `---`. Điền tag và title không có dấu ngoặc kép; toàn bộ Markdown phía dưới là description.
 
-3. Commit và push lên `main`. Khi version `X.Y.Z` tăng, workflow **Build and draft release** tự kiểm tra, build macOS Apple Silicon, macOS Intel và Windows x64, rồi tạo **Draft Release** kèm ba ZIP và `SHA256SUMS.txt`.
+3. Cấu hình [khóa ký cập nhật](app-updates.md) một lần. Commit và push lên `main`. Khi version `X.Y.Z` tăng, workflow **Build and draft release** tự kiểm tra, build macOS Apple Silicon, macOS Intel và Windows x64, rồi tạo **Draft Release** kèm ba ZIP, installer Windows, feed cập nhật đã ký và `SHA256SUMS.txt`.
 4. Vào **Releases**, kiểm tra draft rồi bấm **Publish release**.
 
 Chỉ tăng số build sau dấu `+` không tạo release mới. Không cần tự tạo hoặc push tag. Tag được tạo đúng commit khi publish draft.

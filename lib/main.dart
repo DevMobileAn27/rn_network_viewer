@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'services/capture_store.dart';
 import 'services/connection_security.dart';
 import 'services/app_settings.dart';
+import 'services/app_updater.dart';
 import 'l10n/app_localizations.dart';
 import 'services/viewer_server.dart';
 import 'services/viewer_mcp_server.dart';
@@ -43,7 +44,18 @@ Future<void> main() async {
     server.bindAddress = preferences.getString('lanAddress') ?? '';
     server.lanCidr = preferences.getString('lanCidr') ?? '';
   }
-  runApp(ViewerApp(store: store, server: server, preferences: preferences));
+  final updater = AppUpdater.desktop();
+  runApp(
+    ViewerApp(
+      store: store,
+      server: server,
+      preferences: preferences,
+      updater: updater,
+    ),
+  );
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    unawaited(updater.check(background: true));
+  });
   unawaited(server.start(port: preferences.getInt('viewerPort') ?? 38940));
 }
 
@@ -54,11 +66,13 @@ class ViewerApp extends StatefulWidget {
     required this.server,
     this.preferences,
     this.mcpServer,
+    this.updater,
   });
   final CaptureStore store;
   final ViewerServer server;
   final SharedPreferences? preferences;
   final ViewerMcpServer? mcpServer;
+  final AppUpdater? updater;
 
   @override
   State<ViewerApp> createState() => _ViewerAppState();
@@ -90,6 +104,7 @@ class _ViewerAppState extends State<ViewerApp> {
     _settings.removeListener(_syncMcp);
     _settings.dispose();
     if (widget.mcpServer == null) _mcp.dispose();
+    widget.updater?.dispose();
     super.dispose();
   }
 
@@ -110,6 +125,7 @@ class _ViewerAppState extends State<ViewerApp> {
         server: widget.server,
         settings: _settings,
         mcpServer: _mcp,
+        updater: widget.updater,
       ),
     ),
   );

@@ -17,6 +17,14 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   // plugins.
   ::CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
 
+  // AppUpdater owns checks. WinSparkle must never schedule silent downloads.
+  if (HMODULE sparkle = ::GetModuleHandleW(L"WinSparkle.dll")) {
+    using ConfigureChecks = void(__cdecl*)(int);
+    auto configure_checks = reinterpret_cast<ConfigureChecks>(
+        ::GetProcAddress(sparkle, "win_sparkle_set_automatic_check_for_updates"));
+    if (configure_checks) configure_checks(0);
+  }
+
   flutter::DartProject project(L"data");
 
   std::vector<std::string> command_line_arguments =

@@ -251,7 +251,10 @@ class _ConnectionSecurityPanelState extends State<ConnectionSecurityPanel> {
                     _pendingNotice();
                   },
           ),
-          Text(context.l10n.connectionSecurityHint),
+          Text(
+            context.l10n.connectionSecurityHint,
+            style: TextStyle(color: context.palette.description),
+          ),
           if (_lan) ...[
             const SizedBox(height: 16),
             Text(context.l10n.lanAddress),
@@ -303,7 +306,10 @@ class _ConnectionSecurityPanelState extends State<ConnectionSecurityPanel> {
                     _pendingNotice();
                   },
           ),
-          Text(context.l10n.captureOptionsHint),
+          Text(
+            context.l10n.captureOptionsHint,
+            style: TextStyle(color: context.palette.description),
+          ),
           if (_error != null)
             Padding(
               padding: const EdgeInsets.only(top: 12),
@@ -363,7 +369,10 @@ class _ConnectionSecurityPanelState extends State<ConnectionSecurityPanel> {
             ],
           ),
           const SizedBox(height: 12),
-          Text(context.l10n.tokenRotationHint),
+          Text(
+            context.l10n.tokenRotationHint,
+            style: TextStyle(color: context.palette.description),
+          ),
         ],
       );
     },

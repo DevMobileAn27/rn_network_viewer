@@ -17,6 +17,7 @@ import 'viewer_dropdown.dart';
 import 'inspector.dart';
 import 'resizable_split_view.dart';
 import 'json_beautify_screen.dart';
+import '../services/app_updater.dart';
 
 class ViewerShell extends StatefulWidget {
   const ViewerShell({
@@ -25,11 +26,13 @@ class ViewerShell extends StatefulWidget {
     required this.server,
     required this.settings,
     required this.mcpServer,
+    this.updater,
   });
   final CaptureStore store;
   final ViewerServer server;
   final AppSettings settings;
   final ViewerMcpServer mcpServer;
+  final AppUpdater? updater;
   @override
   State<ViewerShell> createState() => _ViewerShellState();
 }
@@ -161,6 +164,7 @@ class _ViewerShellState extends State<ViewerShell>
         settings: widget.settings,
         server: server,
         mcpServer: widget.mcpServer,
+        updater: widget.updater,
       ),
     ),
   );

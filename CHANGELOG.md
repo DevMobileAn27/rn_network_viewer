@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Check for updates at startup and from Settings, with native confirmation, download and installation on macOS and Windows.
+- Sign update archives and generate separate GitHub Release feeds for Apple Silicon, Intel and Windows x64.
+- Add a Windows installer alongside portable ZIP downloads.
+- Require increasing build numbers and configured update signing secrets before release builds.
+
 ## 0.1.4 — 2026-10-19
 
 - Document how to open trusted macOS downloads when blocked, including the app-specific quarantine command.

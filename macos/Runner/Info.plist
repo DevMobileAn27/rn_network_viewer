@@ -30,5 +30,15 @@
 	<string>NSApplication</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Connect React Native apps on your local network to view debug logs and network requests.</string>
+	<key>SUPublicEDKey</key>
+	<string>LJAyUhVXTEyly+UC71Naq9360mMTV6+X9XSLRxzlm58=</string>
+	<key>SUEnableInstallerLauncherService</key>
+	<true/>
+	<key>SUEnableAutomaticChecks</key>
+	<false/>
+	<key>SUAutomaticallyUpdate</key>
+	<false/>
+	<key>SUAllowsAutomaticUpdates</key>
+	<false/>
 </dict>
 </plist>

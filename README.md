@@ -11,9 +11,9 @@
 
 ## Mở ứng dụng
 
-1. Giải nén bản build dành cho hệ điều hành của bạn.
-2. **macOS:** kéo `RN Network Viewer.app` vào **Applications** rồi mở app.
-3. **Windows:** mở file `.exe` trong thư mục đã giải nén, giữ nguyên các file và thư mục đi kèm.
+1. Tải bản build dành cho hệ điều hành và chip của bạn từ [GitHub Releases](https://github.com/DevMobileAn27/rn_network_viewer/releases).
+2. **macOS:** giải nén, kéo `RN Network Viewer.app` vào **Applications** rồi mở app.
+3. **Windows:** chạy file `windows-x64-setup.exe` để cài đặt. Nếu dùng bản ZIP, giải nén rồi mở `rn_network_viewer.exe`, giữ nguyên các file và thư mục đi kèm.
 4. Kiểm tra trạng thái **Listening :38940** trên thanh công cụ.
 
 ### Khi macOS chặn mở app
@@ -26,6 +26,12 @@ open "/Applications/RN Network Viewer.app"
 ```
 
 Lệnh này gỡ thuộc tính quarantine của app. Chỉ dùng với bản tải từ [GitHub Releases chính thức](https://github.com/DevMobileAn27/rn_network_viewer/releases) mà bạn tin cậy.
+
+## Cập nhật ứng dụng
+
+App tự kiểm tra phiên bản mới khi mở. Bạn cũng có thể vào **Settings → App updates → Check for updates**. Khi có bản mới, xác nhận trong popup để tải và cài; ứng dụng sẽ đóng rồi mở lại. Chọn **Later/Cancel** để tiếp tục dùng bản hiện tại.
+
+Trên Windows, dùng file **`windows-x64-setup.exe`** để cài app. Các bản cũ chưa có tính năng update cần tải bản hỗ trợ update và cài thủ công lần đầu.
 
 ## Kết nối app React Native
 

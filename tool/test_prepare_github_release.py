@@ -90,6 +90,15 @@ class ReleasePreparationTest(unittest.TestCase):
         self.assertEqual((self.root / 'output').read_text(), 'should_release=false\n')
         self.assertFalse((self.root / 'build').exists())
 
+    def test_version_bump_requires_increased_macos_build_number(self):
+        for version in ('0.1.2+2', '0.1.2+1', '0.1.2'):
+            with self.subTest(version=version):
+                self.write_version(version)
+                result = self.prepare()
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn('build number', result.stderr)
+                self.assertFalse((self.root / 'build').exists())
+
     def test_manual_run_can_prepare_without_previous_commit(self):
         result = self.prepare(before='')
         self.assertEqual(result.returncode, 0, result.stderr)

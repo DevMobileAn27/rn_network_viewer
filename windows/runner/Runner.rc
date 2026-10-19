@@ -3,6 +3,9 @@
 #pragma code_page(65001)
 #include "resource.h"
 
+// Public verification key; the private key is never included in the app.
+DSAPub DSAPEM "../../updates/windows_dsa_pub.pem"
+
 #define APSTUDIO_READONLY_SYMBOLS
 /////////////////////////////////////////////////////////////////////////////
 //

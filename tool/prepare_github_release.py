@@ -22,6 +22,13 @@ def version_increased(current, previous):
     return current_parts > previous_parts
 
 
+def app_build(source):
+    match = re.search(r'^version:\s*\d+\.\d+\.\d+\+(\d+)\s*$', source, re.M)
+    if not match:
+        raise ValueError('A numeric Flutter build number is required for updates')
+    return int(match.group(1))
+
+
 def release_info(source, version):
     lines = source.splitlines()
     if not lines or lines[0] != '---':
@@ -64,7 +71,9 @@ def verify_tag_commit(tag, commit):
 
 
 def main():
-    version = app_version(Path('pubspec.yaml').read_text())
+    source = Path('pubspec.yaml').read_text()
+    version = app_version(source)
+    build = app_build(source)
     before = os.environ.get('BEFORE_COMMIT', '')
     if before and set(before) != {'0'}:
         previous_source = subprocess.check_output(
@@ -76,6 +85,8 @@ def main():
                 output.write('should_release=false\n')
             print(f'Version remains {version}; no release build needed.')
             return
+        if build <= app_build(previous_source):
+            raise ValueError('Increase the Flutter build number so installed macOS apps detect the update')
 
     tag, title, body = release_info(Path('github_release_info.md').read_text(), version)
     commit = os.environ['GITHUB_SHA']

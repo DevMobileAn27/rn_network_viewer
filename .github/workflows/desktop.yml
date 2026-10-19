@@ -38,6 +38,16 @@ jobs:
         env:
           BEFORE_COMMIT: ${{ github.event_name == 'push' && github.event.before || '' }}
         run: python3 tool/prepare_github_release.py
+      - name: Require update signing secrets
+        if: steps.version.outputs.should_release == 'true'
+        env:
+          MACOS_KEY: ${{ secrets.MACOS_UPDATE_PRIVATE_KEY }}
+          WINDOWS_KEY: ${{ secrets.WINDOWS_UPDATE_PRIVATE_KEY }}
+        run: |
+          if [ -z "$MACOS_KEY" ] || [ -z "$WINDOWS_KEY" ]; then
+            echo '::error::Set MACOS_UPDATE_PRIVATE_KEY and WINDOWS_UPDATE_PRIVATE_KEY repository secrets. See docs/app-updates.md.'
+            exit 1
+          fi
 
   checks:
     name: Check source
@@ -97,6 +107,24 @@ jobs:
           Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath "build/release/$archive"
           $hash = (Get-FileHash "build/release/$archive" -Algorithm SHA256).Hash.ToLower()
           "$hash  $archive" | Set-Content "build/release/$env:ARCHIVE_NAME.sha256"
+      - name: Create Windows installer
+        if: matrix.target == 'windows'
+        shell: pwsh
+        env:
+          APP_VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "/DAppVersion=$env:APP_VERSION" "/DOutputName=${env:ARCHIVE_NAME}-setup" windows/installer.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Sign macOS update
+        if: matrix.target == 'macos'
+        env:
+          UPDATE_SIGNING_KEY: ${{ secrets.MACOS_UPDATE_PRIVATE_KEY }}
+        run: python3 tool/create_update_feed.py ${{ matrix.target }}-${{ matrix.arch }} "build/release/$ARCHIVE_NAME.zip"
+      - name: Sign Windows update
+        if: matrix.target == 'windows'
+        env:
+          UPDATE_SIGNING_KEY: ${{ secrets.WINDOWS_UPDATE_PRIVATE_KEY }}
+        run: python tool/create_update_feed.py windows-x64 "build/release/${env:ARCHIVE_NAME}-setup.exe"
       - name: Upload app (kept for 7 days)
         uses: actions/upload-artifact@v4
         with:
@@ -135,7 +163,11 @@ jobs:
             test -s "rn-network-viewer-$RELEASE_VERSION-$platform.zip"
           done
           sha256sum --check ./*.sha256
-          sha256sum ./*.zip > SHA256SUMS.txt
+          test -s "rn-network-viewer-$RELEASE_VERSION-windows-x64-setup.exe"
+          for platform in macos-arm64 macos-x86_64 windows-x64; do
+            test -s "appcast-$platform.xml"
+          done
+          sha256sum ./*.zip ./*.exe ./*.xml > SHA256SUMS.txt
       - name: Create draft with app downloads
         run: |
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
@@ -147,6 +179,6 @@ jobs:
             --target "$GITHUB_SHA" \
             --title "$RELEASE_TITLE" \
             --notes-file build/release-notes.md \
-            dist/*.zip dist/SHA256SUMS.txt
+            dist/*.zip dist/*.exe dist/*.xml dist/SHA256SUMS.txt
           printf '## Draft ready\n\nReview and publish: %s\n' \
             "$(gh release view "$RELEASE_TAG" --json url --jq .url)" >> "$GITHUB_STEP_SUMMARY"
