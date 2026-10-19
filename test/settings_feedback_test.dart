@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:rn_network_viewer/l10n/app_localizations.dart';
 import 'package:rn_network_viewer/services/app_settings.dart';
 import 'package:rn_network_viewer/services/capture_store.dart';
+import 'package:rn_network_viewer/services/connection_security.dart';
 import 'package:rn_network_viewer/services/viewer_server.dart';
 import 'package:rn_network_viewer/ui/settings_screen.dart';
 import 'package:rn_network_viewer/ui/viewer_dropdown.dart';
@@ -241,7 +242,12 @@ void main() {
     expect(h.viewer.accessToken, isNot(originalToken));
     expect(h.preferences.getString('captureToken'), h.viewer.accessToken);
     expect(feedback('success'), findsOneWidget);
-    expect(find.textContaining(h.viewer.accessToken), findsNothing);
+    expect(
+      tester
+          .widget<TextField>(find.byKey(const ValueKey('capture-token')))
+          .obscureText,
+      isTrue,
+    );
     await tapAction(tester, find.text('Reset MCP token'));
     expect(h.preferences.getString('mcpToken'), h.mcp.accessToken);
     expect(find.textContaining('MCP token reset.'), findsOneWidget);
@@ -259,6 +265,45 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets(
+    'custom pairing token validates, persists and restores default on apply',
+    (tester) async {
+      final h = await FeedbackHarness.pump(tester);
+      final field = find.byKey(const ValueKey('capture-token'));
+      await tester.ensureVisible(field);
+      await tester.pumpAndSettle();
+      expect(h.viewer.accessToken, defaultViewerToken);
+      final mcpToken = h.mcp.accessToken;
+      await tester.enterText(field, 'invalid');
+      await tapAction(tester, find.text('Apply & restart'));
+      expect(feedback('warning'), findsOneWidget);
+      expect(h.viewer.accessToken, defaultViewerToken);
+      expect(h.viewer.starts, 0);
+      final custom = 'c' * 43;
+      await tester.enterText(field, custom);
+      await tapAction(tester, find.text('Apply & restart'));
+      expect(feedback('success'), findsOneWidget);
+      expect(h.viewer.accessToken, custom);
+      expect(h.preferences.getString('captureToken'), custom);
+      expect(h.viewer.setupCode, contains("VIEWER_TOKEN: '$custom'"));
+      expect(h.mcp.accessToken, mcpToken);
+      await tapAction(
+        tester,
+        find.byKey(const ValueKey('default-capture-token')),
+      );
+      expect(
+        h.viewer.accessToken,
+        custom,
+        reason: 'Default stays a draft until Apply',
+      );
+      await tapAction(tester, find.text('Apply & restart'));
+      expect(h.viewer.accessToken, defaultViewerToken);
+      expect(h.preferences.getString('captureToken'), defaultViewerToken);
+      expect(h.mcp.accessToken, mcpToken);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   for (final width in [560.0, 1360.0]) {
     testWidgets(

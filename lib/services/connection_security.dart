@@ -2,6 +2,9 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
+/// Public pairing default shared with the SDK; not a private secret.
+const defaultViewerToken = 'rnv_default_pairing_token_for_local_dev_001';
+
 String createAccessToken() {
   final random = Random.secure();
   return base64Url

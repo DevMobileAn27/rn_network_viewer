@@ -229,7 +229,7 @@
   "copySdkSetup": "Copy SDK setup",
   "rotatePairingToken": "Reset pairing token",
   "rotateMcpToken": "Reset MCP token",
-  "tokenRotationHint": "Reset disconnects clients using the old token. Copy setup again after a reset. Keep tokens out of Git. For Android USB, use adb reverse and host 127.0.0.1.",
+  "tokenRotationHint": "Apply token changes, then copy SDK setup and reload the app. Reset generates a new private token and disconnects old clients. Keep custom tokens out of Git.",
   "redactSensitiveData": "Redact sensitive data",
   "limitCapture": "Limit capture",
   "captureOptionsHint": "Apply & restart, then copy SDK setup and reload your React Native app. Changes apply to new captures.",
@@ -295,5 +295,11 @@
   "updateAvailable": "A new version is available. Confirm in the update window to install.",
   "updateCurrent": "You’re up to date.",
   "updateFailed": "Could not check for updates. Check your connection and try again.",
-  "updateInstalling": "Closing the app to install the update…"
+  "updateInstalling": "Closing the app to install the update…",
+  "pairingToken": "Pairing token",
+  "pairingTokenHint": "Shared default. Custom token: 43 letters, digits, - or _.",
+  "pairingTokenInvalid": "Use exactly 43 letters, digits, - or _.",
+  "showPairingToken": "Show token",
+  "hidePairingToken": "Hide token",
+  "useDefaultToken": "Use default token"
 }

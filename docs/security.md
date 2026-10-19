@@ -1,15 +1,15 @@
 # Security and upgrade guide
 
-These changes are in the working source / next release. Previously published SDK versions without `VIEWER_TOKEN` cannot connect to the secured Viewer. Upgrade both components, rebuild the native app, and copy fresh setup from **Settings → Security**. Port-only initialization now also needs a token in its overrides.
+Upgrade the SDK and Viewer together and rebuild the native app. A fresh Viewer and SDK with omitted `VIEWER_TOKEN` share the public default `rnv_default_pairing_token_for_local_dev_001`. Previously saved Viewer tokens are preserved. Edit **Settings → Security → Pairing token** or choose **Use default token**, then **Apply & restart**. After setting a custom token, copy fresh SDK setup; the SDK token must match.
 
 ## Connection policy
 
 - Default capture endpoint: `ws://127.0.0.1:38940/rnv/network`.
 - LAN is opt-in. Bind only the selected, currently assigned RFC1918 IPv4 address. Require an explicit private CIDR and reject source addresses outside it. IPv6 LAN, wildcard and public binds are unsupported.
-- Require a random 256-bit pairing token in the Authorization header before upgrading to WebSocket. Browser Origin headers and unexpected Host headers are rejected. The Android emulator host alias `10.0.2.2` is accepted in localhost mode.
-- Discovery is not authorization: a machine on the same LAN still needs the token. A port may remain discoverable by a network scan; these checks restrict access to the service, not visibility of the computer.
+- Require a matching pairing token in the Authorization header before upgrading to WebSocket. The shared default is public and is not a private access credential; set a custom token to restrict access. Reset pairing token generates a random 256-bit custom token. Browser Origin headers and unexpected Host headers are rejected. The Android emulator host alias `10.0.2.2` is accepted in localhost mode.
+- Discovery is not authorization: a machine on the same LAN still needs the token, but the shared default is known to anyone who reads the package. A port may remain discoverable by a network scan; these checks restrict access to the service, not visibility of the computer.
 - Source IP checks cannot identify physical LAN membership behind a NAT, VPN, reverse proxy or tunnel. Do not expose or forward these endpoints. Use OS firewall rules for the selected interface as defense in depth.
-- Reset pairing token disconnects SDK sockets. Reset MCP token restarts MCP and invalidates old client credentials. Tokens are separate; sharing an SDK token does not grant MCP read access.
+- Applying a changed pairing token or resetting it disconnects SDK sockets. Existing tokens are preserved on upgrade; custom tokens accept exactly 43 letters, digits, hyphens or underscores. Reset MCP token restarts MCP and invalidates old client credentials. Tokens are separate; sharing an SDK token does not grant MCP read access.
 - Tokens persist in local application preferences (not an encrypted vault). Anyone with access to this OS account/preferences, clipboard, SDK config or client config may obtain them. Keep local config out of Git and rotate after sharing it accidentally.
 
 ## WSS

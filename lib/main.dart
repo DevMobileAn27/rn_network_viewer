@@ -19,7 +19,10 @@ Future<void> main() async {
   final preferences = await SharedPreferences.getInstance();
   for (final key in ['captureToken', 'mcpToken']) {
     if (!validAccessToken(preferences.getString(key) ?? '')) {
-      if (!await preferences.setString(key, createAccessToken())) {
+      if (!await preferences.setString(
+        key,
+        key == 'captureToken' ? defaultViewerToken : createAccessToken(),
+      )) {
         throw StateError('Cannot persist access token');
       }
     }

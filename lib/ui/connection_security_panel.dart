@@ -30,11 +30,15 @@ class _ConnectionSecurityPanelState extends State<ConnectionSecurityPanel> {
   late bool _limit = widget.server.limitCapture;
   late String _address = _lan ? widget.server.bindAddress : '';
   late final _cidr = TextEditingController(text: widget.server.lanCidr);
+  late final _token = TextEditingController(text: widget.server.accessToken);
+  bool _showToken = false;
+  bool _invalidToken = false;
   List<String> _addresses = [];
   bool _busy = false;
   String? _error;
 
   bool get _pendingChanges =>
+      _token.text.trim() != widget.server.accessToken ||
       _lan != widget.server.lanEnabled ||
       _redact != widget.server.redactSensitiveData ||
       _limit != widget.server.limitCapture ||
@@ -83,6 +87,11 @@ class _ConnectionSecurityPanelState extends State<ConnectionSecurityPanel> {
       _error = null;
     });
     try {
+      final token = _token.text.trim();
+      if (!validAccessToken(token)) {
+        setState(() => _invalidToken = true);
+        throw FormatException(context.l10n.pairingTokenInvalid);
+      }
       if (_lan) {
         try {
           if (_address.isEmpty ||
@@ -98,6 +107,7 @@ class _ConnectionSecurityPanelState extends State<ConnectionSecurityPanel> {
         // Persist enabled last so interrupted saves cannot enable an incomplete configuration.
         if (!await prefs.setBool('redactSensitiveData', _redact) ||
             !await prefs.setBool('limitCapture', _limit) ||
+            !await prefs.setString('captureToken', token) ||
             !await prefs.setString('lanAddress', _address) ||
             !await prefs.setString('lanCidr', _cidr.text.trim()) ||
             !await prefs.setBool('lanEnabled', _lan)) {
@@ -105,6 +115,7 @@ class _ConnectionSecurityPanelState extends State<ConnectionSecurityPanel> {
         }
       }
       await widget.server.stop();
+      widget.server.accessToken = token;
       widget.server.redactSensitiveData = _redact;
       widget.server.limitCapture = _limit;
       widget.server.bindAddress = _lan ? _address : '127.0.0.1';
@@ -179,6 +190,8 @@ class _ConnectionSecurityPanelState extends State<ConnectionSecurityPanel> {
         final running = widget.server.running;
         await widget.server.stop();
         widget.server.accessToken = token;
+        _token.text = token;
+        _invalidToken = false;
         if (running) {
           await widget.server.start(port: widget.server.port);
           restartFailed = !widget.server.running || widget.server.error != null;
@@ -220,6 +233,7 @@ class _ConnectionSecurityPanelState extends State<ConnectionSecurityPanel> {
   @override
   void dispose() {
     _cidr.dispose();
+    _token.dispose();
     super.dispose();
   }
 
@@ -309,6 +323,63 @@ class _ConnectionSecurityPanelState extends State<ConnectionSecurityPanel> {
           Text(
             context.l10n.captureOptionsHint,
             style: TextStyle(color: context.palette.description),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            context.l10n.pairingToken,
+            style: TextStyle(color: context.palette.muted, fontSize: 12),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            key: const ValueKey('capture-token'),
+            controller: _token,
+            enabled: !busy,
+            obscureText: !_showToken,
+            autocorrect: false,
+            enableSuggestions: false,
+            onChanged: (_) {
+              if (_invalidToken) setState(() => _invalidToken = false);
+            },
+            decoration: InputDecoration(
+              helperText: context.l10n.pairingTokenHint,
+              helperMaxLines: 3,
+              helperStyle: TextStyle(color: context.palette.description),
+              errorText: _invalidToken
+                  ? context.l10n.pairingTokenInvalid
+                  : null,
+              errorMaxLines: 3,
+              suffixIcon: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    tooltip: _showToken
+                        ? context.l10n.hidePairingToken
+                        : context.l10n.showPairingToken,
+                    onPressed: busy
+                        ? null
+                        : () => setState(() => _showToken = !_showToken),
+                    icon: Icon(
+                      _showToken ? Icons.visibility_off : Icons.visibility,
+                      size: 18,
+                    ),
+                  ),
+                  IconButton(
+                    key: const ValueKey('default-capture-token'),
+                    tooltip: context.l10n.useDefaultToken,
+                    onPressed: busy
+                        ? null
+                        : () {
+                            setState(() {
+                              _token.text = defaultViewerToken;
+                              _invalidToken = false;
+                            });
+                            _pendingNotice();
+                          },
+                    icon: const Icon(Icons.settings_backup_restore, size: 18),
+                  ),
+                ],
+              ),
+            ),
           ),
           if (_error != null)
             Padding(

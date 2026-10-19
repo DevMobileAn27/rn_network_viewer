@@ -9,7 +9,7 @@ import 'connection_security.dart';
 
 class ViewerServer extends ChangeNotifier {
   ViewerServer(this.store, {String? token})
-    : accessToken = token ?? createAccessToken();
+    : accessToken = token ?? defaultViewerToken;
   String accessToken;
   bool redactSensitiveData = true;
   bool get limitCapture => store.limitCapture;

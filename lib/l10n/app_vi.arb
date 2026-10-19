@@ -229,7 +229,7 @@
   "copySdkSetup": "Sao chép setup SDK",
   "rotatePairingToken": "Đổi token ghép đôi",
   "rotateMcpToken": "Đổi token MCP",
-  "tokenRotationHint": "Đổi token sẽ ngắt client cũ. Sao chép lại setup sau khi đổi. Không lưu token vào Git. Android USB dùng adb reverse và host 127.0.0.1.",
+  "tokenRotationHint": "Apply sau khi sửa token, rồi copy SDK setup và reload app. Đổi token tạo khóa riêng mới và ngắt client cũ. Không lưu token riêng vào Git.",
   "redactSensitiveData": "Che dữ liệu nhạy cảm",
   "limitCapture": "Giới hạn capture",
   "captureOptionsHint": "Áp dụng & khởi động lại, rồi copy cấu hình SDK và reload app React Native. Áp dụng cho dữ liệu mới.",
@@ -295,5 +295,11 @@
   "updateAvailable": "Có phiên bản mới. Xác nhận trong cửa sổ cập nhật để cài đặt.",
   "updateCurrent": "Bạn đang dùng phiên bản mới nhất.",
   "updateFailed": "Không thể kiểm tra cập nhật. Kiểm tra kết nối rồi thử lại.",
-  "updateInstalling": "Đang đóng ứng dụng để cài bản cập nhật…"
+  "updateInstalling": "Đang đóng ứng dụng để cài bản cập nhật…",
+  "pairingToken": "Token ghép đôi",
+  "pairingTokenHint": "Token mặc định dùng chung. Token riêng: 43 ký tự chữ, số, - hoặc _.",
+  "pairingTokenInvalid": "Nhập đúng 43 ký tự chữ, số, - hoặc _.",
+  "showPairingToken": "Hiện token",
+  "hidePairingToken": "Ẩn token",
+  "useDefaultToken": "Dùng token mặc định"
 }

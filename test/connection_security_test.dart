@@ -10,6 +10,25 @@ import 'viewer_server_test.dart' show until;
 
 void main() {
   test(
+    'capture default matches the SDK and custom tokens remain separate from MCP',
+    () {
+      expect(defaultViewerToken, 'rnv_default_pairing_token_for_local_dev_001');
+      expect(validAccessToken(defaultViewerToken), isTrue);
+      final store = CaptureStore();
+      final server = ViewerServer(store);
+      final mcp = ViewerMcpServer(store, server);
+      final custom = ViewerServer(store, token: 'c' * 43);
+      expect(server.accessToken, defaultViewerToken);
+      expect(custom.accessToken, 'c' * 43);
+      expect(mcp.accessToken, isNot(defaultViewerToken));
+      mcp.dispose();
+      custom.dispose();
+      server.dispose();
+      store.dispose();
+    },
+  );
+
+  test(
     'WSS validates certificate trust and still requires pairing',
     () async {
       final dir = await Directory.systemTemp.createTemp('rnv-tls-test-');

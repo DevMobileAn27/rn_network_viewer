@@ -47,7 +47,7 @@ Với iOS, chạy `pod install` trong thư mục `ios`.
 
 1. Mở **Settings → Security → Copy SDK setup** trong Viewer.
 2. Dán đoạn khởi tạo vào entry point của app, trước `AppRegistry.registerComponent`. Giữ khối `if (__DEV__)`.
-3. Đoạn cấu hình chứa **pairing token**: giữ trong file cấu hình local được Git ignore; không commit token.
+3. SDK và Viewer mới dùng chung token mặc định; có thể bỏ `VIEWER_TOKEN` khi cả hai dùng mặc định. Với token riêng, giữ cấu hình local ngoài Git.
 4. Build lại app native rồi gọi API hoặc ghi log.
 
 **Cấu hình bảo mật mới cần nâng cấp cả Viewer lẫn SDK.** Các bản SDK cũ không gửi token sẽ bị từ chối. Xem [hướng dẫn nâng cấp và bảo mật](docs/security.md).
@@ -65,7 +65,7 @@ Mặc định Viewer chỉ nghe tại `127.0.0.1`.
 
 Ví dụ subnet: `192.168.1.0/24`; dùng subnet thực tế của mạng, không mặc định mọi mạng đều là `/24`. Cho phép firewall trên interface đã chọn nếu cần.
 
-LAN cần token và chỉ chấp nhận địa chỉ nguồn thuộc subnet đã cấu hình. `ws://` không mã hóa dữ liệu; dùng mạng tin cậy, USB hoặc [cấu hình WSS](docs/security.md#wss). Không mở port forwarding hoặc public tunnel.
+LAN chỉ chấp nhận địa chỉ nguồn thuộc subnet đã cấu hình. Token mặc định công khai dùng chung; đổi **Settings → Security → Pairing token → Apply & restart** để hạn chế truy cập, rồi copy lại SDK setup. **Use default token** khôi phục mặc định sau khi Apply. Token đã lưu vẫn được giữ khi nâng cấp. `ws://` không mã hóa dữ liệu; dùng mạng tin cậy, USB hoặc [cấu hình WSS](docs/security.md#wss). Không mở port forwarding hoặc public tunnel.
 
 ## Chọn ứng dụng
 

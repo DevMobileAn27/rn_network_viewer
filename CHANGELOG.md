@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Share the SDK's public default pairing token on fresh installations; preserve existing saved tokens.
+- Allow editing or restoring the pairing token from Settings, with validation and Apply & restart.
+- Keep MCP authentication on its separate random token.
+
 ## 0.1.5 — 2026-10-19
 
 - Check for updates at startup and from Settings, with native confirmation, download and installation on macOS and Windows.
