@@ -216,40 +216,42 @@ void main() {
       );
       final formats = find.byKey(const ValueKey('copy-mcp-formats'));
       await tester.ensureVisible(formats);
-      expect(find.byKey(const ValueKey('copy-mcp-json')), findsNothing);
-      await tester.tap(formats);
-      await tester.pumpAndSettle();
-      final copyJson = find.byKey(const ValueKey('copy-mcp-json'));
-      await tester.tap(copyJson);
-      await tester.pumpAndSettle();
-      expect(
-        jsonDecode(copied!)['mcpServers']['rn-network-viewer']['url'],
-        'http://127.0.0.1:39942/mcp',
-      );
-      expect(find.byKey(const ValueKey('copy-mcp-json')), findsNothing);
-      await tester.tap(formats);
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('copy-mcp-codex')));
-      await tester.pumpAndSettle();
-      expect(copied, mcp.codexConfiguration);
+      expect(find.text('Codex'), findsOneWidget);
       final copySetup = find.byKey(const ValueKey('copy-mcp-setup'));
-      await tester.ensureVisible(copySetup);
       await tester.tap(copySetup);
       await tester.pumpAndSettle();
-      expect(copied, mcp.setupCommand);
-      expect(copied, contains('Transport: Streamable HTTP'));
-      expect(copied, contains('Endpoint: http://127.0.0.1:39942/mcp'));
-      expect(copied, isNot(contains('38941')));
+      expect(copied, mcp.setupCommand(McpSetupClient.codex));
+      expect(copied, contains('codex mcp add rn-network-viewer --url'));
+      expect(
+        copied,
+        contains('--bearer-token-env-var RN_NETWORK_VIEWER_MCP_TOKEN'),
+      );
+      expect(copied, contains(mcp.accessToken));
+      expect(copied, isNot(contains('claude mcp add')));
+      await tester.tap(formats);
+      await tester.pumpAndSettle();
+      final claude = find.byKey(const ValueKey('copy-mcp-claude'));
+      expect(
+        tester.getTopLeft(claude).dy,
+        greaterThan(tester.getTopLeft(formats).dy),
+      );
+      await tester.tap(claude);
+      await tester.pumpAndSettle();
+      expect(copied, mcp.setupCommand(McpSetupClient.codex));
+      await tester.tap(copySetup);
+      await tester.pumpAndSettle();
+      expect(copied, mcp.setupCommand(McpSetupClient.claude));
       expect(
         copied,
         contains(
           'claude mcp add --transport http --scope user rn-network-viewer',
         ),
       );
-      expect(copied, contains('codex mcp add rn-network-viewer --url'));
+      expect(copied, contains('Authorization: Bearer ${mcp.accessToken}'));
       expect(copied, contains(mcp.clientConfiguration));
       expect(copied, contains('"mcp-remote"'));
-      expect(copied, contains('ChatGPT web/cloud connectors cannot reach'));
+      expect(copied, isNot(contains('codex mcp add')));
+      expect(copied, contains('Endpoint: http://127.0.0.1:39942/mcp'));
       expect(
         copied,
         contains('Do not claim access until a tool call succeeds'),

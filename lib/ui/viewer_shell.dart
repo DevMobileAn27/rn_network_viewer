@@ -5,6 +5,9 @@ import 'package:flutter/material.dart';
 import '../services/app_settings.dart';
 import '../l10n/strings.dart';
 import 'settings_screen.dart';
+import 'help_dialog.dart';
+import 'network_request_table.dart';
+import 'viewer_notification.dart';
 
 import '../models/capture.dart';
 import '../services/capture_store.dart';
@@ -132,15 +135,21 @@ class _ViewerShellState extends State<ViewerShell>
       );
       if (location == null) return;
       await File(location.path).writeAsString(snapshot);
-      if (mounted) _notice(context.l10n.exportedTo(location.path));
+      if (mounted) {
+        _notice(
+          context.l10n.exportedTo(location.path),
+          type: ViewerNotificationType.success,
+        );
+      }
     } catch (e) {
       if (mounted) _notice(context.l10n.exportFailed(e.toString()));
     }
   }
 
-  void _notice(String message) => ScaffoldMessenger.of(
-    context,
-  ).showSnackBar(SnackBar(content: Text(message)));
+  void _notice(
+    String message, {
+    ViewerNotificationType type = ViewerNotificationType.danger,
+  }) => showViewerNotification(context, type: type, description: message);
 
   Future<void> _rememberLayout(Future<void> save) async {
     try {
@@ -262,6 +271,7 @@ class _ViewerShellState extends State<ViewerShell>
                                   child: inspector
                                       ? ResizableSplitView(
                                           key: ValueKey(_console),
+                                          defaultWidth: _console ? 400 : null,
                                           initialWidth: _console
                                               ? widget
                                                     .settings
@@ -365,6 +375,9 @@ class _ViewerShellState extends State<ViewerShell>
         ),
         SizedBox(width: 8),
         IconButton(
+          color: server.running
+              ? const Color(0xffeab308)
+              : context.palette.info,
           tooltip: server.running
               ? context.l10n.stopServer
               : context.l10n.startServer,
@@ -394,8 +407,11 @@ class _ViewerShellState extends State<ViewerShell>
           icon: Icon(Icons.settings_outlined, size: 20),
         ),
         IconButton(
-          tooltip: context.l10n.connectionGuide,
-          onPressed: _connectionGuide,
+          tooltip: context.l10n.helpTitle,
+          onPressed: () => showDialog<void>(
+            context: context,
+            builder: (_) => const HelpDialog(),
+          ),
           icon: Icon(Icons.help_outline, size: 20),
         ),
       ],
@@ -632,168 +648,17 @@ class _ViewerShellState extends State<ViewerShell>
 
   Widget _networkList(List<NetworkRecord> requests, bool inspector) {
     if (requests.isEmpty) return _empty(store.network.isEmpty);
-    return Column(
-      children: [
-        Container(
-          height: 33,
-          padding: EdgeInsets.symmetric(horizontal: 18),
-          color: context.palette.surface,
-          child: Row(
-            children: [
-              SizedBox(
-                width: 70,
-                child: Text(
-                  context.l10n.methodColumn,
-                  style: TextStyle(
-                    fontSize: 9,
-                    color: context.palette.muted,
-                    letterSpacing: 1,
-                  ),
-                ),
-              ),
-              Expanded(
-                child: Text(
-                  context.l10n.urlColumn,
-                  style: TextStyle(
-                    fontSize: 9,
-                    color: context.palette.muted,
-                    letterSpacing: 1,
-                  ),
-                ),
-              ),
-              SizedBox(
-                width: 82,
-                child: Text(
-                  context.l10n.statusColumn,
-                  style: TextStyle(fontSize: 9, color: context.palette.muted),
-                ),
-              ),
-              SizedBox(
-                width: 82,
-                child: Text(
-                  context.l10n.timeColumn,
-                  textAlign: TextAlign.right,
-                  style: TextStyle(fontSize: 9, color: context.palette.muted),
-                ),
-              ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: ListView.builder(
-            itemCount: requests.length,
-            itemExtent: 68,
-            itemBuilder: (context, index) {
-              final r = requests[index];
-              final selected = _networkKey == r.key;
-              final colors = context.palette;
-              final secondaryColor = selected
-                  ? colors.onSelectedRowMuted
-                  : colors.muted;
-              final uri = Uri.tryParse(r.url);
-              final path = uri == null || uri.host.isEmpty
-                  ? (r.request.isEmpty ? context.l10n.missingRequest : r.url)
-                  : '${uri.path.isEmpty ? '/' : uri.path}${uri.hasQuery ? '?${uri.query}' : ''}';
-              return Material(
-                color: selected ? colors.selectedRow : Colors.transparent,
-                child: InkWell(
-                  onTap: () {
-                    setState(() => _networkKey = r.key);
-                    if (!inspector) _detail(() => _networkInspector(r));
-                  },
-                  child: Container(
-                    padding: EdgeInsets.only(left: 14, right: 18),
-                    decoration: BoxDecoration(
-                      border: Border(
-                        left: BorderSide(
-                          width: 4,
-                          color: selected
-                              ? colors.selectedRowMarker
-                              : Colors.transparent,
-                        ),
-                        bottom: BorderSide(color: colors.line),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        SizedBox(
-                          width: 70,
-                          child: Align(
-                            alignment: Alignment.centerLeft,
-                            child: StatusChip(
-                              r.method,
-                              prominent: true,
-                              selected: selected,
-                              color: colors.methodColor(r.method),
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                path,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: selected ? colors.onSelectedRow : null,
-                                  fontWeight: selected
-                                      ? FontWeight.w600
-                                      : FontWeight.normal,
-                                ),
-                              ),
-                              SizedBox(height: 5),
-                              Text(
-                                '${uri?.host ?? ''} · ${store.sessions[r.sessionId]?.name ?? ''} · ${clockTime(r.time)}',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  color: secondaryColor,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        SizedBox(width: 8),
-                        SizedBox(
-                          width: 82,
-                          child: Align(
-                            alignment: Alignment.centerLeft,
-                            child: StatusChip(
-                              filterLabel(context, r.state),
-                              prominent: true,
-                              selected: selected,
-                              color: colors.statusColor(
-                                r.status,
-                                transportError: r.error.isNotEmpty,
-                              ),
-                            ),
-                          ),
-                        ),
-                        SizedBox(
-                          width: 82,
-                          child: Text(
-                            r.duration == null ? '—' : '${r.duration} ms',
-                            textAlign: TextAlign.right,
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: secondaryColor,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      ],
+    return NetworkRequestTable(
+      records: requests,
+      selectedKey: _networkKey,
+      applicationName: (record) => store.sessions[record.sessionId]?.name ?? '',
+      initialWidths: widget.settings.networkColumnWidths,
+      onWidthsChanged: (widths) =>
+          _rememberLayout(widget.settings.setNetworkColumnWidths(widths)),
+      onSelected: (record) {
+        setState(() => _networkKey = record.key);
+        if (!inspector) _detail(() => _networkInspector(record));
+      },
     );
   }
 

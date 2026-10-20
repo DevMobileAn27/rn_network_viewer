@@ -16,7 +16,7 @@ class ViewerPalette {
   Color get input => dark ? const Color(0xff20252c) : const Color(0xffedf1f5);
   Color get muted => dark ? const Color(0xff8d98a7) : const Color(0xff596778);
   Color get description =>
-      dark ? const Color(0xffb0b0b0) : const Color(0xff525252);
+      dark ? const Color(0xffb0b7c3) : const Color(0xff4b5563);
   Color get accent => dark ? const Color(0xff63ddbb) : const Color(0xff08785d);
   Color get primaryFill => const Color(0xff08785d);
   Color get selectedRow =>

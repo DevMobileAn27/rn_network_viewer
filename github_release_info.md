@@ -1,22 +1,25 @@
 ---
-tag: v0.1.5
-title: RN Network Viewer v0.1.5
+tag: v0.1.6
+title: RN Network Viewer v0.1.6
 ---
 
 ## What’s new
 
-- Check for updates at startup or from **Settings → App updates → Check for updates**. Confirm in the popup to download and install a new version.
-- Signed updates for macOS Apple Silicon, macOS Intel and Windows x64.
-- Windows installer alongside the portable ZIP download.
-- Current app version and author displayed in App updates.
-- Dark gray Settings descriptions and green, red or yellow feedback for action results.
+- Compact Network table with resizable columns and saved widths. The request list and detail panel start evenly split; panel sizes and the selected detail tab are remembered.
+- Scroll hints on the request detail tabs, separate header/body views and fewer repeated titles.
+- Preview color values and automatically display base64 image responses.
+- New bottom-left notifications with information, success, error and warning states.
+- MCP setup with a Codex/Claude selector, plus right-aligned Settings actions and clearer app-update status.
+- English/Vietnamese usage guide and a link to GitHub Discussions.
+- Updated README with short GIF guides for each feature.
+- More reliable macOS update status and UTF-8 release metadata on Windows.
 
 ## Downloads
 
-- **macOS Apple Silicon (M-series):** `rn-network-viewer-0.1.5-macos-arm64.zip`
-- **macOS Intel:** `rn-network-viewer-0.1.5-macos-x86_64.zip`
-- **Windows x64 installer:** `rn-network-viewer-0.1.5-windows-x64-setup.exe`
-- **Windows x64 portable:** `rn-network-viewer-0.1.5-windows-x64.zip`
+- **macOS Apple Silicon (M-series):** `rn-network-viewer-0.1.6-macos-arm64.zip`
+- **macOS Intel:** `rn-network-viewer-0.1.6-macos-x86_64.zip`
+- **Windows x64 installer:** `rn-network-viewer-0.1.6-windows-x64-setup.exe`
+- **Windows x64 portable:** `rn-network-viewer-0.1.6-windows-x64.zip`
 
 On macOS, unzip and drag **RN Network Viewer.app** into **Applications**.
 On Windows, run the installer. For the portable ZIP, unzip and run **rn_network_viewer.exe**. Keep the DLL files and `data` folder alongside the executable.
@@ -36,7 +39,7 @@ This removes the app’s quarantine attribute. Only use it for a trusted downloa
 
 ## Upgrading
 
-Versions without the updater need to install **0.1.5** manually once. This version can receive future published updates from within the app. Export any captures you want to keep before updating.
+Versions without the updater need to install **0.1.6** manually once. This version can receive future published updates from within the app. Export any captures you want to keep before updating.
 
 Use React Native SDK **0.4.7 or later**. Open **Settings → Security → Copy SDK setup**, update your React Native configuration, then rebuild and run your development app.
 

@@ -201,7 +201,7 @@
   "mcpPort": "Cổng MCP",
   "mcpEndpoint": "Địa chỉ kết nối",
   "copyMcpJson": "Sao chép cấu hình JSON",
-  "copyMcpSetup": "Sao chép lệnh thiết lập",
+  "copyMcpSetup": "Copy & Paste to",
   "copyMcpCodex": "Sao chép cấu hình Codex",
   "formatJson": "Format",
   "invalidJson": "JSON không hợp lệ",
@@ -301,5 +301,32 @@
   "pairingTokenInvalid": "Nhập đúng 43 ký tự chữ, số, - hoặc _.",
   "showPairingToken": "Hiện token",
   "hidePairingToken": "Ẩn token",
-  "useDefaultToken": "Dùng token mặc định"
+  "useDefaultToken": "Dùng token mặc định",
+  "helpTitle": "Hướng dẫn sử dụng cơ bản",
+  "helpConnectTitle": "1. Kết nối app React Native",
+  "helpConnectBody": "Khởi động Viewer, sau đó cài @quocandev27/rn_network_debugger vào app development. Vào Cài đặt → Bảo mật, copy SDK setup vào entry point trước AppRegistry.registerComponent rồi build lại app. Với Android dùng 10.0.2.2 hoặc adb reverse; với thiết bị thật, cấu hình kết nối LAN trong Bảo mật.",
+  "helpNetworkTitle": "2. Xem request trong tab Mạng",
+  "helpNetworkBody": "Thao tác trên ứng dụng React Native để phát sinh request, rồi chọn một dòng để xem header và body. Lọc theo URL, method hoặc trạng thái. JSON có chế độ JSON / Tree và tìm kiếm; ảnh và chuỗi màu có preview. Kéo divider giữa các khung và cột để đổi kích thước.",
+  "helpConsoleTitle": "3. Đọc log trong tab Nhật ký",
+  "helpConsoleBody": "Xem console log thu thập từ app React Native. Tìm theo nội dung và tham số hoặc lọc theo cấp độ, sau đó chọn một dòng để đọc đầy đủ message và arguments dạng object.",
+  "helpJsonTitle": "4. Định dạng JSON trong Json beautify",
+  "helpJsonBody": "Dán JSON vào khung bên trái và bấm Định dạng, hoặc nhấn ⌘/Ctrl + Enter. Xem kết quả dưới dạng JSON / Tree, tìm kiếm và sao chép. Công cụ này dùng được cả khi chưa kết nối ứng dụng.",
+  "helpCaptureTitle": "5. Tạm dừng, xóa và xuất dữ liệu",
+  "helpCaptureBody": "Tạm dừng ngừng thu thập request và log mới; Tiếp tục bật lại việc thu thập. Xóa loại bỏ dữ liệu đã thu thập. Xuất lưu capture thành file JSON. Hãy xuất trước khi đóng Viewer nếu cần giữ lại dữ liệu.",
+  "goToDiscussion": "Tham gia thảo luận",
+  "openDiscussionFailed": "Không thể mở trình duyệt. Bạn có thể sao chép và mở địa chỉ này:",
+  "mcpCopySuccess": "Sao chép thành công",
+  "resizeNetworkColumn": "Điều chỉnh độ rộng cột {column}",
+  "@resizeNetworkColumn": {
+    "placeholders": {
+      "column": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationInfo": "Thông tin",
+  "notificationWarning": "Cảnh báo",
+  "notificationConfirm": "Xác nhận",
+  "notificationCancel": "Hủy",
+  "updateNewVersion": "Cập nhật phiên bản mới"
 }

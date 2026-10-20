@@ -5,9 +5,9 @@
 - [Source và bản phát hành Viewer](https://github.com/DevMobileAn27/rn_network_viewer)
 - [Thư viện React Native trên npm](https://www.npmjs.com/package/@quocandev27/rn_network_debugger)
 
-Ảnh minh họa được chụp trực tiếp từ app trên macOS, giao diện sáng, với dữ liệu mẫu **Shop Demo**.
+Mỗi mục bên dưới có GIF ngắn minh họa giao diện RN Network Viewer với dữ liệu mẫu **Coffee Shop Demo**. Mũi tên đỏ chỉ thao tác cần thực hiện.
 
-![Network: danh sách request và response JSON có thu gọn nhánh](docs/screenshots/network.png)
+Nhấn biểu tượng **?** ở Home để xem hướng dẫn sử dụng cơ bản hoặc mở **Tham gia thảo luận / Go to Discussion**.
 
 ## Mở ứng dụng
 
@@ -29,7 +29,7 @@ Lệnh này gỡ thuộc tính quarantine của app. Chỉ dùng với bản t�
 
 ## Cập nhật ứng dụng
 
-App tự kiểm tra phiên bản mới khi mở. Bạn cũng có thể vào **Settings → App updates → Check for updates**. Khi có bản mới, xác nhận trong popup để tải và cài; ứng dụng sẽ đóng rồi mở lại. Chọn **Later/Cancel** để tiếp tục dùng bản hiện tại.
+App tự kiểm tra phiên bản mới khi mở. Bạn cũng có thể vào **Settings → App updates → Check for updates**. Dấu tick xanh cạnh phiên bản cho biết app đang mới nhất; khi có bản mới, nút đổi thành **Update new version**. Khi có bản mới, xác nhận trong popup để tải và cài; ứng dụng sẽ đóng rồi mở lại. Chọn **Later/Cancel** để tiếp tục dùng bản hiện tại.
 
 Trên Windows, dùng file **`windows-x64-setup.exe`** để cài app. Các bản cũ chưa có tính năng update cần tải bản hỗ trợ update và cài thủ công lần đầu.
 
@@ -51,6 +51,8 @@ Với iOS, chạy `pod install` trong thư mục `ios`.
 4. Build lại app native rồi gọi API hoặc ghi log.
 
 **Cấu hình bảo mật mới cần nâng cấp cả Viewer lẫn SDK.** Các bản SDK cũ không gửi token sẽ bị từ chối. Xem [hướng dẫn nâng cấp và bảo mật](docs/security.md).
+
+![Cấu hình Security và sao chép SDK setup](docs/screenshots/connection.gif)
 
 ### Chọn kết nối
 
@@ -84,19 +86,33 @@ Thanh trên cùng có các tab **Network**, **Console**, **Json beautify**. Bên
 | Tab chi tiết | Nội dung |
 | --- | --- |
 | **Overview** | Thông tin tổng quan, trạng thái, thời gian và query parameters |
-| **Request** | Headers và Body gửi đi |
-| **Response** | Headers và Body nhận về |
+| **Request header** | Headers gửi đi |
+| **Request body** | Body gửi đi |
+| **Response header** | Headers nhận về |
+| **Response body** | Body nhận về |
 | **Raw** | Dữ liệu gốc của request được chọn |
 
-Method và status có màu riêng để dễ phân biệt. Trong **Request** và **Response**:
+Method và status có màu riêng để dễ phân biệt. Chọn **Request body** hoặc **Response body** để xem dữ liệu:
 
-- **Headers** mặc định thu gọn; nhấn mũi tên để mở.
-- **Body** hiển thị trực tiếp bên dưới. Chọn **JSON** để xem nội dung có thụt lề, tô màu và số dòng; bấm mũi tên cạnh số dòng để mở/thu gọn object hoặc array.
+- **Body** có tab riêng. Chọn **JSON** để xem nội dung có thụt lề, tô màu và số dòng; bấm mũi tên cạnh số dòng để mở/thu gọn object hoặc array.
 - Chọn **Tree** để xem và mở/thu gọn từng nhánh dữ liệu.
 - Cuộn ngang để đọc dòng dài. Sao chép nội dung bằng biểu tượng copy; nội dung sao chép vẫn đầy đủ khi có nhánh đang thu gọn.
-- Nhấn biểu tượng terminal ở đầu khung chi tiết để **Copy as cURL**.
+- Chuỗi màu như `#08785d`, `rgb(...)`, `hsl(...)` có ô preview màu ngay cạnh giá trị.
+- Response ảnh, data URI hoặc chuỗi base64 chứa ảnh được nhận diện để xem trực tiếp; dùng **Raw** để xem nội dung gốc.
 
-Kéo đường chia giữa danh sách và chi tiết để điều chỉnh độ rộng. Nhấp đúp để trở về độ rộng mặc định. Khi cửa sổ hẹp, chọn request để xem chi tiết trong cửa sổ nổi.
+![Chọn request và duyệt các tab chi tiết](docs/screenshots/network.gif)
+
+Mặc định đường chia danh sách/chi tiết nằm giữa cửa sổ; Method và Status dùng độ rộng tối thiểu. Kéo divider giữa các cột hoặc giữa hai panel để điều chỉnh. Vị trí divider ở Network, Console, Json beautify và tab chi tiết đang chọn được ghi nhớ qua lần mở app sau. Đổi request vẫn giữ tab hiện tại. Nhấp đúp divider giữa hai panel để về mặc định. Khi thanh tab chi tiết còn nội dung ngoài khung, gradient xanh lá ở mép gợi ý cuộn ngang. Khi cửa sổ hẹp, chọn request để xem trong cửa sổ nổi.
+
+### Tìm trong JSON
+
+Thanh tìm chỉ xuất hiện với body JSON. Nhập từ khóa, dùng **Aa** (phân biệt hoa thường), **ab** (nguyên từ), `.*` (biểu thức chính quy), mũi tên lên/xuống để chuyển kết quả và **×** để xóa. Bộ đếm hiển thị vị trí như **2 of 3** hoặc **No results**. Tìm kiếm dùng được trong cả JSON và Tree.
+
+![Tìm và di chuyển qua các kết quả JSON](docs/screenshots/json-search.gif)
+
+### Xem ảnh
+
+![Nhận diện và xem response ảnh base64](docs/screenshots/image-preview.gif)
 
 ## Xem console log
 
@@ -105,16 +121,16 @@ Kéo đường chia giữa danh sách và chi tiết để điều chỉnh độ
 3. Dùng **All levels** để lọc `log`, `info`, `warn`, `error` hoặc `debug`.
 4. Chọn một dòng để xem chi tiết. Mở các nhánh trong **Arguments** để xem object và array.
 
-![Console: lọc log theo cấp độ và xem dữ liệu object trong Arguments](docs/screenshots/console.png)
+![Console: lọc log theo cấp độ và xem dữ liệu object trong Arguments](docs/screenshots/console.gif)
 
 ## Json beautify
 
 1. Mở **Json beautify**.
 2. Dán JSON vào **Input**.
 3. Bấm **Format**, hoặc nhấn **⌘ Enter** trên macOS / **Ctrl Enter** trên Windows.
-4. Chọn **JSON** hoặc **Tree** để xem kết quả. Dùng biểu tượng copy để sao chép JSON đã định dạng.
+4. Chọn **JSON** hoặc **Tree** để xem kết quả. Dùng thanh tìm như ở body JSON và biểu tượng copy để sao chép JSON đã định dạng.
 
-![Json beautify: input JSON và kết quả có tô màu, số dòng, thu gọn nhánh](docs/screenshots/json-beautify.png)
+![Json beautify: input JSON và kết quả có tô màu, số dòng, thu gọn nhánh](docs/screenshots/json-beautify.gif)
 
 Trong chế độ **JSON**, bấm mũi tên cạnh số dòng để mở/thu gọn object hoặc array. Nếu input không hợp lệ, popup hiển thị lỗi và vị trí dòng/cột; bạn có thể sửa input và Format lại.
 
@@ -126,16 +142,16 @@ MCP mặc định **tắt**. Kết nối AI như sau:
 
 1. Mở **Settings → MCP**, bật công tắc ở tiêu đề.
 2. Kiểm tra trạng thái **Listening** và địa chỉ **Endpoint**. Cổng MCP mặc định là `38941`.
-3. Bấm **Copy setup command**, rồi dán vào AI để thiết lập kết nối. Nội dung bao gồm endpoint hiện tại, lệnh cho Claude Code/Codex CLI và cấu hình cho client khác.
+3. Mặc định client là **Codex**. Bấm tên client hoặc mũi tên để chọn **Codex / Claude**, sau đó bấm **Copy & Paste to**. Khi hiện thông báo sao chép thành công, dán vào AI tương ứng để thiết lập kết nối.
 4. Giữ Viewer mở, chạy app React Native và yêu cầu AI đọc dữ liệu.
 
-![Cài đặt MCP: công tắc, trạng thái Listening, cổng, endpoint và nút sao chép thiết lập](docs/screenshots/mcp.png)
+![Cài đặt MCP: công tắc, trạng thái Listening, cổng, endpoint và nút sao chép thiết lập](docs/screenshots/settings-mcp.gif)
 
-Mũi tên bên phải nút sao chép có thêm **Copy JSON config** và **Copy Codex config**. Nếu đổi **MCP port**, bấm **Save & restart**, sau đó cập nhật cấu hình ở client AI.
+Menu bên phải chọn client; thao tác chọn không tự sao chép. Nếu đổi **MCP port**, bấm **Save & restart**, sau đó cập nhật cấu hình ở client AI.
 
 Cấu hình đã copy có token MCP riêng. Giữ cấu hình này riêng tư; sau khi **Reset MCP token**, copy và cập nhật lại client AI.
 
-Client AI cần chạy trên cùng máy tính. Với client chỉ hỗ trợ stdio, **Copy setup command** có cấu hình dùng `mcp-remote`, cần Node.js. ChatGPT web/cloud không truy cập trực tiếp được endpoint localhost này; cần client hỗ trợ MCP cục bộ.
+Client AI cần chạy trên cùng máy tính. Với client chỉ hỗ trợ stdio, **Copy & Paste to → Claude** có cấu hình dùng `mcp-remote`, cần Node.js. ChatGPT web/cloud không truy cập trực tiếp được endpoint localhost này; cần client hỗ trợ MCP cục bộ.
 
 Ví dụ yêu cầu AI:
 
@@ -155,6 +171,8 @@ Các nút trên thanh công cụ:
 | **Clear** | Xóa request và log hiện có của tất cả ứng dụng |
 | **Export** | Lưu file JSON gồm dữ liệu đang giữ của tất cả ứng dụng, kể cả các mục bị ẩn bởi bộ lọc |
 
+![Tạm dừng, tiếp tục và vị trí nút Export](docs/screenshots/capture-controls.gif)
+
 Khi **Limit capture** bật (mặc định), Viewer giữ tối đa 5.000 request/log và khoảng 64 MiB dữ liệu capture; các mục cũ được bỏ dần khi chạm giới hạn. Xuất dữ liệu trước khi đóng app nếu cần giữ lại lịch sử. MCP cũng đọc dữ liệu hiện đang được Viewer giữ.
 
 ## Cài đặt
@@ -170,6 +188,8 @@ Nhấn biểu tượng **bánh răng** để mở **Settings**.
 | **Security** | LAN mặc định tắt; subnet, token, che dữ liệu và giới hạn capture |
 
 ![Cài đặt ngôn ngữ, giao diện, cổng kết nối và MCP](docs/screenshots/settings.png)
+
+Thông báo hiển thị ở góc trái bên dưới: thông tin (xanh dương), thành công (xanh lá), lỗi (đỏ), cảnh báo (vàng). Bấm **OK** để đóng, hoặc **Confirm / Cancel** với thông báo cần xác nhận.
 
 Ngôn ngữ, giao diện, cổng, cấu hình bảo mật và lựa chọn bật MCP được ghi nhớ cho lần mở sau. Ngôn ngữ và giao diện áp dụng ngay.
 

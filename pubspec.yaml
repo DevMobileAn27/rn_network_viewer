@@ -1,7 +1,7 @@
 name: rn_network_viewer
 description: Flutter desktop devtools for the React Native network debugger SDK.
 publish_to: none
-version: 0.1.5+6
+version: 0.1.6+7
 
 environment:
   sdk: ^3.11.0
@@ -18,6 +18,7 @@ dependencies:
   mcp_dart: ^2.4.3
   auto_updater: ^1.0.0
   package_info_plus: ^10.2.2
+  url_launcher: ^6.3.2
 dev_dependencies:
   flutter_test:
     sdk: flutter

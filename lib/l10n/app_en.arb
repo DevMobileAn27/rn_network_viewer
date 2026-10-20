@@ -201,7 +201,7 @@
   "mcpPort": "MCP port",
   "mcpEndpoint": "Endpoint",
   "copyMcpJson": "Copy JSON config",
-  "copyMcpSetup": "Copy setup command",
+  "copyMcpSetup": "Copy & Paste to",
   "copyMcpCodex": "Copy Codex config",
   "formatJson": "Format",
   "invalidJson": "Invalid JSON",
@@ -301,5 +301,32 @@
   "pairingTokenInvalid": "Use exactly 43 letters, digits, - or _.",
   "showPairingToken": "Show token",
   "hidePairingToken": "Hide token",
-  "useDefaultToken": "Use default token"
+  "useDefaultToken": "Use default token",
+  "helpTitle": "Basic usage guide",
+  "helpConnectTitle": "1. Connect your React Native app",
+  "helpConnectBody": "Start Viewer, then install @quocandev27/rn_network_debugger in your development app. In Settings → Security, copy SDK setup into your app entry point before AppRegistry.registerComponent and rebuild. For Android use 10.0.2.2 or adb reverse; for a physical device configure LAN access in Security.",
+  "helpNetworkTitle": "2. Inspect requests in Network",
+  "helpNetworkBody": "Use your React Native app to generate requests, then select a row to inspect its headers and body. Filter by URL, method or status. JSON supports JSON / Tree views and search; images and color values have previews. Drag the panel and column dividers to resize them.",
+  "helpConsoleTitle": "3. Read logs in Console",
+  "helpConsoleBody": "View captured React Native console logs. Search messages and arguments or filter by level, then select a log to inspect its full message and structured arguments.",
+  "helpJsonTitle": "4. Format JSON in Json beautify",
+  "helpJsonBody": "Paste JSON into the left panel and choose Format, or press ⌘/Ctrl + Enter. Browse the result in JSON / Tree, search and copy it. This tool also works without a connected app.",
+  "helpCaptureTitle": "5. Pause, clear and export",
+  "helpCaptureBody": "Pause stops collecting new requests and logs; Resume continues collection. Clear removes captured data. Export saves the capture as JSON. Export before closing Viewer if you need to keep the data.",
+  "goToDiscussion": "Go to Discussion",
+  "openDiscussionFailed": "Could not open your browser. You can copy and open this address:",
+  "mcpCopySuccess": "Copied successfully",
+  "resizeNetworkColumn": "Resize {column} column",
+  "@resizeNetworkColumn": {
+    "placeholders": {
+      "column": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationInfo": "Information",
+  "notificationWarning": "Warning",
+  "notificationConfirm": "Confirm",
+  "notificationCancel": "Cancel",
+  "updateNewVersion": "Update new version"
 }

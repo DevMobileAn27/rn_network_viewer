@@ -99,7 +99,15 @@ class FeedbackHarness {
   }
 }
 
-Finder feedback(String kind) => find.byKey(ValueKey('settings-feedback-$kind'));
+Finder feedback(String kind) => find.ancestor(
+  of: find.byIcon(switch (kind) {
+    'success' => Icons.check_circle_outline_rounded,
+    'error' => Icons.error_outline_rounded,
+    'warning' => Icons.warning_amber_rounded,
+    _ => Icons.info_outline_rounded,
+  }),
+  matching: find.byKey(const ValueKey('viewer-notification')),
+);
 
 Future<void> tapAction(WidgetTester tester, Finder target) async {
   await tester.ensureVisible(target);
@@ -122,7 +130,8 @@ void main() {
       expect(h.settings.themeMode, ThemeMode.dark);
       expect(find.text('Đã đổi giao diện.'), findsOneWidget);
       expect(find.text('Đã đổi ngôn ngữ.'), findsNothing);
-      expect(find.byType(SnackBar), findsOneWidget);
+      expect(find.byKey(const ValueKey('viewer-notification')), findsOneWidget);
+      expect(find.byType(SnackBar), findsNothing);
     },
   );
 
@@ -336,7 +345,10 @@ void main() {
             findsOneWidget,
           );
           expect(feedback('success'), findsNothing);
-          await tapAction(tester, find.byTooltip('Close'));
+          await tapAction(
+            tester,
+            find.byKey(const ValueKey('notification-confirm')),
+          );
           expect(find.byType(SnackBar), findsNothing);
         }
         expect(tester.takeException(), isNull);

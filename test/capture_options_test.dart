@@ -136,6 +136,8 @@ void main() {
         await tester.pumpAndSettle();
         expect(tester.widget<SwitchListTile>(toggle).value, isFalse);
       }
+      await tester.tap(find.byKey(const ValueKey('notification-confirm')));
+      await tester.pumpAndSettle();
       await tester.ensureVisible(find.text('Apply & restart'));
       await tester.tap(find.text('Apply & restart'));
       await tester.pumpAndSettle();

@@ -390,54 +390,58 @@ class _ConnectionSecurityPanelState extends State<ConnectionSecurityPanel> {
               ),
             ),
           const SizedBox(height: 16),
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: [
-              FilledButton.icon(
-                onPressed: busy ? null : _apply,
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size(0, 44),
-                  visualDensity: VisualDensity.standard,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  backgroundColor: context.palette.primaryFill,
-                  foregroundColor: Colors.white,
-                  overlayColor: Colors.white,
-                  shape: buttonShape,
+          Align(
+            alignment: Alignment.centerRight,
+            child: Wrap(
+              alignment: WrapAlignment.end,
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                FilledButton.icon(
+                  onPressed: busy ? null : _apply,
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size(0, 44),
+                    visualDensity: VisualDensity.standard,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    backgroundColor: context.palette.primaryFill,
+                    foregroundColor: Colors.white,
+                    overlayColor: Colors.white,
+                    shape: buttonShape,
+                  ),
+                  icon: const Icon(Icons.save_outlined, size: 18),
+                  label: Text(context.l10n.applyConnection),
                 ),
-                icon: const Icon(Icons.save_outlined, size: 18),
-                label: Text(context.l10n.applyConnection),
-              ),
-              OutlinedButton.icon(
-                onPressed: busy
-                    ? null
-                    : () => copySettingsText(
-                        context,
-                        widget.server.setupCode,
-                        message: _pendingChanges
-                            ? context.l10n.sdkSetupCopiedPending
-                            : context.l10n.sdkSetupCopied,
-                        kind: _pendingChanges
-                            ? SettingsFeedbackKind.warning
-                            : SettingsFeedbackKind.success,
-                      ),
-                style: outlinedButtonStyle,
-                icon: const Icon(Icons.copy_outlined, size: 18),
-                label: Text(context.l10n.copySdkSetup),
-              ),
-              OutlinedButton.icon(
-                onPressed: busy ? null : () => _rotate(false),
-                style: outlinedButtonStyle,
-                icon: const Icon(Icons.restart_alt, size: 18),
-                label: Text(context.l10n.rotatePairingToken),
-              ),
-              OutlinedButton.icon(
-                onPressed: busy ? null : () => _rotate(true),
-                style: outlinedButtonStyle,
-                icon: const Icon(Icons.restart_alt, size: 18),
-                label: Text(context.l10n.rotateMcpToken),
-              ),
-            ],
+                OutlinedButton.icon(
+                  onPressed: busy
+                      ? null
+                      : () => copySettingsText(
+                          context,
+                          widget.server.setupCode,
+                          message: _pendingChanges
+                              ? context.l10n.sdkSetupCopiedPending
+                              : context.l10n.sdkSetupCopied,
+                          kind: _pendingChanges
+                              ? SettingsFeedbackKind.warning
+                              : SettingsFeedbackKind.success,
+                        ),
+                  style: outlinedButtonStyle,
+                  icon: const Icon(Icons.copy_outlined, size: 18),
+                  label: Text(context.l10n.copySdkSetup),
+                ),
+                OutlinedButton.icon(
+                  onPressed: busy ? null : () => _rotate(false),
+                  style: outlinedButtonStyle,
+                  icon: const Icon(Icons.restart_alt, size: 18),
+                  label: Text(context.l10n.rotatePairingToken),
+                ),
+                OutlinedButton.icon(
+                  onPressed: busy ? null : () => _rotate(true),
+                  style: outlinedButtonStyle,
+                  icon: const Icon(Icons.restart_alt, size: 18),
+                  label: Text(context.l10n.rotateMcpToken),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 12),
           Text(

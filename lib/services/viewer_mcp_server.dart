@@ -9,6 +9,14 @@ import 'mcp_capture_tools.dart';
 import 'viewer_server.dart';
 import 'connection_security.dart';
 
+enum McpSetupClient {
+  codex('Codex'),
+  claude('Claude');
+
+  const McpSetupClient(this.label);
+  final String label;
+}
+
 class ViewerMcpServer extends ChangeNotifier {
   ViewerMcpServer(CaptureStore store, ViewerServer viewer, {String? token})
     : accessToken = token ?? createAccessToken(),
@@ -39,7 +47,7 @@ class ViewerMcpServer extends ChangeNotifier {
   String get codexConfiguration =>
       '[mcp_servers.rn-network-viewer]\nurl = "$endpoint"\nhttp_headers = { Authorization = "Bearer $accessToken" }\n';
 
-  String get setupCommand =>
+  String setupCommand(McpSetupClient client) =>
       '''Connect to my local RN Network Viewer MCP server and use it to inspect my React Native app's network requests and console logs.
 
 Server name: rn-network-viewer
@@ -47,28 +55,29 @@ Transport: Streamable HTTP
 Endpoint: $endpoint
 Authentication: Bearer token (loopback only). Keep this configuration private.
 
-Set up the MCP connection using the configuration supported by your client:
+Set up the MCP connection for ${client.label}:
 
-Claude Code:
-claude mcp add --transport http --scope user rn-network-viewer $endpoint --header "Authorization: Bearer $accessToken"
-
-Codex CLI:
+${client == McpSetupClient.codex ? '''Codex CLI:
 export RN_NETWORK_VIEWER_MCP_TOKEN='$accessToken'
 codex mcp add rn-network-viewer --url $endpoint --bearer-token-env-var RN_NETWORK_VIEWER_MCP_TOKEN
 Keep this environment variable available whenever launching Codex; the export above applies only to the current shell.
 
-Clients supporting HTTP MCP JSON configuration:
+Codex configuration:
+$codexConfiguration''' : '''Claude Code:
+claude mcp add --transport http --scope user rn-network-viewer $endpoint --header "Authorization: Bearer $accessToken"
+
+Claude HTTP MCP configuration:
 $clientConfiguration
 
-For a stdio-only desktop client, use this bridge (requires Node.js and downloads mcp-remote on first run):
+For a stdio-only Claude desktop client, use this bridge (requires Node.js and downloads mcp-remote on first run):
 ${const JsonEncoder.withIndent('  ').convert({
-        'mcpServers': {
-          'rn-network-viewer': {
-            'command': 'npx',
-            'args': ['-y', 'mcp-remote', endpoint, '--header', 'Authorization: Bearer $accessToken'],
-          },
-        },
-      })}
+              'mcpServers': {
+                'rn-network-viewer': {
+                  'command': 'npx',
+                  'args': ['-y', 'mcp-remote', endpoint, '--header', 'Authorization: Bearer $accessToken'],
+                },
+              },
+            })}'''}
 
 Keep RN Network Viewer open with MCP enabled. The client must run on the same computer. ChatGPT web/cloud connectors cannot reach this localhost URL directly; use a client with local MCP support. If you cannot configure MCP in this environment, explain the required client setup instead of claiming to be connected.
 

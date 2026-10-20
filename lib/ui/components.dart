@@ -5,11 +5,13 @@ import 'package:flutter/services.dart';
 
 import '../models/capture.dart';
 import 'viewer_theme.dart';
+import 'viewer_notification.dart';
 import '../l10n/strings.dart';
 import 'json_code_view.dart';
 import 'json_tree_view.dart';
 import 'json_find_bar.dart';
 import 'json_find_controller.dart';
+import 'body_color.dart';
 
 export 'viewer_theme.dart';
 
@@ -30,11 +32,10 @@ Future<void> copyText(
 ]) async {
   await Clipboard.setData(ClipboardData(text: text));
   if (context.mounted) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message ?? context.l10n.copied),
-        duration: Duration(seconds: 2),
-      ),
+    showViewerNotification(
+      context,
+      type: ViewerNotificationType.success,
+      description: message ?? context.l10n.copied,
     );
   }
 }
@@ -46,24 +47,16 @@ class StatusChip extends StatelessWidget {
     this.color,
     this.prominent = false,
     this.selected = false,
+    this.leading,
   });
+  final Widget? leading;
   final String text;
   final Color? color;
   final bool prominent;
   final bool selected;
   @override
-  Widget build(BuildContext context) => Container(
-    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-    decoration: BoxDecoration(
-      color: (color ?? context.palette.accent).withValues(
-        alpha: prominent ? 1 : .1,
-      ),
-      borderRadius: BorderRadius.circular(5),
-      border: prominent && selected
-          ? Border.all(color: Colors.white.withValues(alpha: .8))
-          : null,
-    ),
-    child: Text(
+  Widget build(BuildContext context) {
+    final label = Text(
       text,
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
@@ -74,8 +67,26 @@ class StatusChip extends StatelessWidget {
         fontSize: 11,
         fontWeight: prominent ? FontWeight.w700 : FontWeight.w600,
       ),
-    ),
-  );
+    );
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: (color ?? context.palette.accent).withValues(
+          alpha: prominent ? 1 : .1,
+        ),
+        borderRadius: BorderRadius.circular(5),
+        border: prominent && selected
+            ? Border.all(color: Colors.white.withValues(alpha: .8))
+            : null,
+      ),
+      child: leading == null
+          ? label
+          : Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [leading!, const SizedBox(width: 6), label],
+            ),
+    );
+  }
 }
 
 class EmptyState extends StatelessWidget {
@@ -128,6 +139,7 @@ class DataSection extends StatefulWidget {
     this.preview,
     this.searchable = false,
     this.fillAvailable = false,
+    this.showTitle = true,
   });
   final String title;
   final dynamic value;
@@ -136,6 +148,7 @@ class DataSection extends StatefulWidget {
   final Widget? preview;
   final bool searchable;
   final bool fillAvailable;
+  final bool showTitle;
 
   @override
   State<DataSection> createState() => _DataSectionState();
@@ -214,6 +227,19 @@ class _DataSectionState extends State<DataSection> {
         initiallyExpanded: widget.initiallyExpanded,
       );
     }
+    final color = widget.body && value is String ? parseBodyColor(value) : null;
+    if (color != null) {
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(child: SelectableText('$value', style: mono)),
+          Padding(
+            padding: const EdgeInsets.only(top: 4, left: 8),
+            child: BodyColorSwatch(value: value as String, color: color),
+          ),
+        ],
+      );
+    }
     return SelectableText('$value', style: mono);
   }
 
@@ -226,7 +252,7 @@ class _DataSectionState extends State<DataSection> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (_canFind)
+          if (_canFind && widget.showTitle)
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: Text(
@@ -260,7 +286,8 @@ class _DataSectionState extends State<DataSection> {
                                   focusNode: _findFocus,
                                 ),
                               )
-                            : Text(
+                            : widget.showTitle
+                            ? Text(
                                 title.toUpperCase(),
                                 style: TextStyle(
                                   fontSize: 10,
@@ -268,7 +295,8 @@ class _DataSectionState extends State<DataSection> {
                                   letterSpacing: 1.2,
                                   color: context.palette.muted,
                                 ),
-                              ),
+                              )
+                            : const SizedBox.shrink(),
                       ),
                       if (_canFind) const SizedBox(width: 8),
                       if (widget.body && _isJson) ...[
