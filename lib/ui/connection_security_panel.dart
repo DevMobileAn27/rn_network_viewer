@@ -32,6 +32,7 @@ class _ConnectionSecurityPanelState extends State<ConnectionSecurityPanel> {
   late final _cidr = TextEditingController(text: widget.server.lanCidr);
   late final _token = TextEditingController(text: widget.server.accessToken);
   bool _showToken = false;
+  bool _tokensExpanded = false;
   bool _invalidToken = false;
   List<String> _addresses = [];
   bool _busy = false;
@@ -89,7 +90,10 @@ class _ConnectionSecurityPanelState extends State<ConnectionSecurityPanel> {
     try {
       final token = _token.text.trim();
       if (!validAccessToken(token)) {
-        setState(() => _invalidToken = true);
+        setState(() {
+          _invalidToken = true;
+          _tokensExpanded = true;
+        });
         throw FormatException(context.l10n.pairingTokenInvalid);
       }
       if (_lan) {
@@ -237,6 +241,18 @@ class _ConnectionSecurityPanelState extends State<ConnectionSecurityPanel> {
     super.dispose();
   }
 
+  Widget _optionTitle(String title, String hint) => Row(
+    children: [
+      Flexible(child: Text(title)),
+      const SizedBox(width: 6),
+      Tooltip(
+        message: hint,
+        triggerMode: TooltipTriggerMode.tap,
+        child: Icon(Icons.info_outline, size: 16, color: context.palette.muted),
+      ),
+    ],
+  );
+
   @override
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: Listenable.merge([widget.server, widget.mcp]),
@@ -256,7 +272,10 @@ class _ConnectionSecurityPanelState extends State<ConnectionSecurityPanel> {
         children: [
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
-            title: Text(context.l10n.allowLan),
+            title: _optionTitle(
+              context.l10n.allowLan,
+              context.l10n.connectionSecurityHint,
+            ),
             value: _lan,
             onChanged: busy
                 ? null
@@ -264,10 +283,6 @@ class _ConnectionSecurityPanelState extends State<ConnectionSecurityPanel> {
                     setState(() => _lan = v);
                     _pendingNotice();
                   },
-          ),
-          Text(
-            context.l10n.connectionSecurityHint,
-            style: TextStyle(color: context.palette.description),
           ),
           if (_lan) ...[
             const SizedBox(height: 16),
@@ -299,7 +314,10 @@ class _ConnectionSecurityPanelState extends State<ConnectionSecurityPanel> {
           SwitchListTile(
             key: const ValueKey('redact-sensitive-data'),
             contentPadding: EdgeInsets.zero,
-            title: Text(context.l10n.redactSensitiveData),
+            title: _optionTitle(
+              context.l10n.redactSensitiveData,
+              context.l10n.redactionTooltip,
+            ),
             value: _redact,
             onChanged: busy
                 ? null
@@ -311,7 +329,10 @@ class _ConnectionSecurityPanelState extends State<ConnectionSecurityPanel> {
           SwitchListTile(
             key: const ValueKey('limit-capture'),
             contentPadding: EdgeInsets.zero,
-            title: Text(context.l10n.limitCapture),
+            title: _optionTitle(
+              context.l10n.limitCapture,
+              context.l10n.captureLimitTooltip,
+            ),
             value: _limit,
             onChanged: busy
                 ? null
@@ -320,67 +341,78 @@ class _ConnectionSecurityPanelState extends State<ConnectionSecurityPanel> {
                     _pendingNotice();
                   },
           ),
-          Text(
-            context.l10n.captureOptionsHint,
-            style: TextStyle(color: context.palette.description),
-          ),
-          const SizedBox(height: 20),
-          Text(
-            context.l10n.pairingToken,
-            style: TextStyle(color: context.palette.muted, fontSize: 12),
-          ),
           const SizedBox(height: 8),
-          TextField(
-            key: const ValueKey('capture-token'),
-            controller: _token,
-            enabled: !busy,
-            obscureText: !_showToken,
-            autocorrect: false,
-            enableSuggestions: false,
-            onChanged: (_) {
-              if (_invalidToken) setState(() => _invalidToken = false);
-            },
-            decoration: InputDecoration(
-              helperText: context.l10n.pairingTokenHint,
-              helperMaxLines: 3,
-              helperStyle: TextStyle(color: context.palette.description),
-              errorText: _invalidToken
-                  ? context.l10n.pairingTokenInvalid
-                  : null,
-              errorMaxLines: 3,
-              suffixIcon: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    tooltip: _showToken
-                        ? context.l10n.hidePairingToken
-                        : context.l10n.showPairingToken,
-                    onPressed: busy
-                        ? null
-                        : () => setState(() => _showToken = !_showToken),
-                    icon: Icon(
-                      _showToken ? Icons.visibility_off : Icons.visibility,
-                      size: 18,
+          const Divider(height: 1),
+          ListTile(
+            key: const ValueKey('security-tokens-toggle'),
+            contentPadding: EdgeInsets.zero,
+            title: Text(context.l10n.securityTokens),
+            trailing: Icon(
+              _tokensExpanded
+                  ? Icons.keyboard_arrow_up
+                  : Icons.keyboard_arrow_down,
+            ),
+            onTap: () => setState(() {
+              _tokensExpanded = !_tokensExpanded;
+              if (!_tokensExpanded) _showToken = false;
+            }),
+          ),
+          if (_tokensExpanded) ...[
+            _optionTitle(
+              context.l10n.pairingToken,
+              context.l10n.pairingTokenHint,
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              key: const ValueKey('capture-token'),
+              controller: _token,
+              enabled: !busy,
+              obscureText: !_showToken,
+              autocorrect: false,
+              enableSuggestions: false,
+              onChanged: (_) {
+                if (_invalidToken) setState(() => _invalidToken = false);
+              },
+              decoration: InputDecoration(
+                errorText: _invalidToken
+                    ? context.l10n.pairingTokenInvalid
+                    : null,
+                errorMaxLines: 3,
+                suffixIcon: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      tooltip: _showToken
+                          ? context.l10n.hidePairingToken
+                          : context.l10n.showPairingToken,
+                      onPressed: busy
+                          ? null
+                          : () => setState(() => _showToken = !_showToken),
+                      icon: Icon(
+                        _showToken ? Icons.visibility_off : Icons.visibility,
+                        size: 18,
+                      ),
                     ),
-                  ),
-                  IconButton(
-                    key: const ValueKey('default-capture-token'),
-                    tooltip: context.l10n.useDefaultToken,
-                    onPressed: busy
-                        ? null
-                        : () {
-                            setState(() {
-                              _token.text = defaultViewerToken;
-                              _invalidToken = false;
-                            });
-                            _pendingNotice();
-                          },
-                    icon: const Icon(Icons.settings_backup_restore, size: 18),
-                  ),
-                ],
+                    IconButton(
+                      key: const ValueKey('default-capture-token'),
+                      tooltip: context.l10n.useDefaultToken,
+                      onPressed: busy
+                          ? null
+                          : () {
+                              setState(() {
+                                _token.text = defaultViewerToken;
+                                _invalidToken = false;
+                              });
+                              _pendingNotice();
+                            },
+                      icon: const Icon(Icons.settings_backup_restore, size: 18),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
+            const SizedBox(height: 8),
+          ],
           if (_error != null)
             Padding(
               padding: const EdgeInsets.only(top: 12),
@@ -428,25 +460,30 @@ class _ConnectionSecurityPanelState extends State<ConnectionSecurityPanel> {
                   icon: const Icon(Icons.copy_outlined, size: 18),
                   label: Text(context.l10n.copySdkSetup),
                 ),
-                OutlinedButton.icon(
-                  onPressed: busy ? null : () => _rotate(false),
-                  style: outlinedButtonStyle,
-                  icon: const Icon(Icons.restart_alt, size: 18),
-                  label: Text(context.l10n.rotatePairingToken),
-                ),
-                OutlinedButton.icon(
-                  onPressed: busy ? null : () => _rotate(true),
-                  style: outlinedButtonStyle,
-                  icon: const Icon(Icons.restart_alt, size: 18),
-                  label: Text(context.l10n.rotateMcpToken),
+                PopupMenuButton<bool>(
+                  key: const ValueKey('security-more-actions'),
+                  tooltip: context.l10n.securityMoreActions,
+                  enabled: !busy,
+                  onSelected: _rotate,
+                  color: context.palette.surface,
+                  surfaceTintColor: Colors.transparent,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  itemBuilder: (context) => [
+                    PopupMenuItem(
+                      value: false,
+                      child: Text(context.l10n.rotatePairingToken),
+                    ),
+                    PopupMenuItem(
+                      value: true,
+                      child: Text(context.l10n.rotateMcpToken),
+                    ),
+                  ],
+                  icon: const Icon(Icons.more_horiz),
                 ),
               ],
             ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            context.l10n.tokenRotationHint,
-            style: TextStyle(color: context.palette.description),
           ),
         ],
       );

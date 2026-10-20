@@ -224,14 +224,17 @@ void main() {
       );
       await tapAction(
         tester,
-        find.byKey(const ValueKey('redact-sensitive-data')),
+        find.descendant(
+          of: find.byKey(const ValueKey('redact-sensitive-data')),
+          matching: find.byType(Switch),
+        ),
       );
       expect(feedback('info'), findsOneWidget);
       expect(h.viewer.redactSensitiveData, isTrue);
       await tapAction(tester, find.text('Copy SDK setup'));
       expect(feedback('warning'), findsOneWidget);
       expect(copied, contains('REDACT_SENSITIVE_DATA: true'));
-      await tapAction(tester, find.text('Apply & restart'));
+      await tapAction(tester, find.text('Save'));
       expect(feedback('success'), findsOneWidget);
       expect(h.viewer.redactSensitiveData, isFalse);
       await tapAction(tester, find.text('Copy SDK setup'));
@@ -247,20 +250,36 @@ void main() {
   ) async {
     final h = await FeedbackHarness.pump(tester);
     final originalToken = h.viewer.accessToken;
+    await tapAction(
+      tester,
+      find.byKey(const ValueKey('security-more-actions')),
+    );
     await tapAction(tester, find.text('Reset pairing token'));
     expect(h.viewer.accessToken, isNot(originalToken));
     expect(h.preferences.getString('captureToken'), h.viewer.accessToken);
     expect(feedback('success'), findsOneWidget);
+    await tapAction(
+      tester,
+      find.byKey(const ValueKey('security-tokens-toggle')),
+    );
     expect(
       tester
           .widget<TextField>(find.byKey(const ValueKey('capture-token')))
           .obscureText,
       isTrue,
     );
+    await tapAction(
+      tester,
+      find.byKey(const ValueKey('security-more-actions')),
+    );
     await tapAction(tester, find.text('Reset MCP token'));
     expect(h.preferences.getString('mcpToken'), h.mcp.accessToken);
     expect(find.textContaining('MCP token reset.'), findsOneWidget);
     h.viewer.failStart = true;
+    await tapAction(
+      tester,
+      find.byKey(const ValueKey('security-more-actions')),
+    );
     await tapAction(tester, find.text('Reset pairing token'));
     expect(feedback('warning'), findsOneWidget);
     expect(feedback('success'), findsNothing);
@@ -280,18 +299,31 @@ void main() {
     (tester) async {
       final h = await FeedbackHarness.pump(tester);
       final field = find.byKey(const ValueKey('capture-token'));
+      expect(field, findsNothing);
+      expect(find.text('Reset pairing token'), findsNothing);
+      expect(find.text('Reset MCP token'), findsNothing);
+      await tapAction(
+        tester,
+        find.byKey(const ValueKey('security-tokens-toggle')),
+      );
       await tester.ensureVisible(field);
       await tester.pumpAndSettle();
       expect(h.viewer.accessToken, defaultViewerToken);
       final mcpToken = h.mcp.accessToken;
       await tester.enterText(field, 'invalid');
-      await tapAction(tester, find.text('Apply & restart'));
+      await tapAction(
+        tester,
+        find.byKey(const ValueKey('security-tokens-toggle')),
+      );
+      expect(field, findsNothing);
+      await tapAction(tester, find.text('Save'));
       expect(feedback('warning'), findsOneWidget);
       expect(h.viewer.accessToken, defaultViewerToken);
       expect(h.viewer.starts, 0);
+      expect(field, findsOneWidget);
       final custom = 'c' * 43;
       await tester.enterText(field, custom);
-      await tapAction(tester, find.text('Apply & restart'));
+      await tapAction(tester, find.text('Save'));
       expect(feedback('success'), findsOneWidget);
       expect(h.viewer.accessToken, custom);
       expect(h.preferences.getString('captureToken'), custom);
@@ -306,7 +338,7 @@ void main() {
         custom,
         reason: 'Default stays a draft until Apply',
       );
-      await tapAction(tester, find.text('Apply & restart'));
+      await tapAction(tester, find.text('Save'));
       expect(h.viewer.accessToken, defaultViewerToken);
       expect(h.preferences.getString('captureToken'), defaultViewerToken);
       expect(h.mcp.accessToken, mcpToken);

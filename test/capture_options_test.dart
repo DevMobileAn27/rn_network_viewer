@@ -132,14 +132,16 @@ void main() {
         final toggle = find.byKey(ValueKey(key));
         expect(tester.widget<SwitchListTile>(toggle).value, isTrue);
         await tester.ensureVisible(toggle);
-        await tester.tap(toggle);
+        await tester.tap(
+          find.descendant(of: toggle, matching: find.byType(Switch)),
+        );
         await tester.pumpAndSettle();
         expect(tester.widget<SwitchListTile>(toggle).value, isFalse);
       }
       await tester.tap(find.byKey(const ValueKey('notification-confirm')));
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.text('Apply & restart'));
-      await tester.tap(find.text('Apply & restart'));
+      await tester.ensureVisible(find.text('Save'));
+      await tester.tap(find.text('Save'));
       await tester.pumpAndSettle();
       expect(preferences.getBool('redactSensitiveData'), isFalse);
       expect(preferences.getBool('limitCapture'), isFalse);
