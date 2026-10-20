@@ -1,25 +1,21 @@
 ---
-tag: v0.1.6
-title: RN Network Viewer v0.1.6
+tag: v0.1.7
+title: RN Network Viewer v0.1.7
 ---
 
 ## What’s new
 
-- Compact Network table with resizable columns and saved widths. The request list and detail panel start evenly split; panel sizes and the selected detail tab are remembered.
-- Scroll hints on the request detail tabs, separate header/body views and fewer repeated titles.
-- Preview color values and automatically display base64 image responses.
-- New bottom-left notifications with information, success, error and warning states.
-- MCP setup with a Codex/Claude selector, plus right-aligned Settings actions and clearer app-update status.
-- English/Vietnamese usage guide and a link to GitHub Discussions.
-- Updated README with short GIF guides for each feature.
-- More reliable macOS update status and UTF-8 release metadata on Windows.
+- Simplified Security settings with advanced token controls collapsed by default and reset actions grouped in a menu.
+- Save connection and security changes from the streamlined Settings controls.
+- Success and information notifications auto-hide after 3 seconds by default. Warnings, errors and confirmations stay open until dismissed.
+- Per-notification overrides for auto-hide and display duration.
 
 ## Downloads
 
-- **macOS Apple Silicon (M-series):** `rn-network-viewer-0.1.6-macos-arm64.zip`
-- **macOS Intel:** `rn-network-viewer-0.1.6-macos-x86_64.zip`
-- **Windows x64 installer:** `rn-network-viewer-0.1.6-windows-x64-setup.exe`
-- **Windows x64 portable:** `rn-network-viewer-0.1.6-windows-x64.zip`
+- **macOS Apple Silicon (M-series):** `rn-network-viewer-0.1.7-macos-arm64.zip`
+- **macOS Intel:** `rn-network-viewer-0.1.7-macos-x86_64.zip`
+- **Windows x64 installer:** `rn-network-viewer-0.1.7-windows-x64-setup.exe`
+- **Windows x64 portable:** `rn-network-viewer-0.1.7-windows-x64.zip`
 
 On macOS, unzip and drag **RN Network Viewer.app** into **Applications**.
 On Windows, run the installer. For the portable ZIP, unzip and run **rn_network_viewer.exe**. Keep the DLL files and `data` folder alongside the executable.
